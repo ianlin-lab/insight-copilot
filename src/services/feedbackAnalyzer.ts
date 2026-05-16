@@ -2,6 +2,7 @@ import { tagTaxonomy } from '../data/tagTaxonomy'
 import type { AnalysisResult } from '../types/analysis'
 
 const TAGS = tagTaxonomy
+const API_TIMEOUT_MS = 10000
 
 function unique(items: string[]) {
   return Array.from(new Set(items))
@@ -9,6 +10,65 @@ function unique(items: string[]) {
 
 function includesAny(input: string, keywords: string[]) {
   return keywords.some((keyword) => input.includes(keyword))
+}
+
+function isStringArray(value: unknown) {
+  return Array.isArray(value) && value.every((item) => typeof item === 'string')
+}
+
+function isAnalysisResult(value: unknown): value is AnalysisResult {
+  if (typeof value !== 'object' || value === null) return false
+
+  const candidate = value as Partial<AnalysisResult>
+  const tags = candidate.tags
+
+  return (
+    ['positive', 'general', 'negative', 'risk', 'unclear'].includes(String(candidate.analysisType)) &&
+    ['none', 'low', 'medium', 'high'].includes(String(candidate.riskLevel)) &&
+    typeof candidate.summary === 'string' &&
+    typeof candidate.confidence === 'number' &&
+    typeof tags === 'object' &&
+    tags !== null &&
+    isStringArray(tags.focusObjects) &&
+    isStringArray(tags.emotionStates) &&
+    isStringArray(tags.evaluationTendencies) &&
+    isStringArray(tags.issueTypes) &&
+    isStringArray(tags.userDemands) &&
+    isStringArray(tags.riskSignals) &&
+    isStringArray(tags.suggestedActions) &&
+    Array.isArray(candidate.evidence) &&
+    candidate.evidence.every((item) => typeof item.text === 'string' && typeof item.reason === 'string') &&
+    isStringArray(candidate.recommendedActions)
+  )
+}
+
+async function analyzeWithApi(input: string): Promise<AnalysisResult> {
+  const controller = new AbortController()
+  const timeoutId = window.setTimeout(() => controller.abort(), API_TIMEOUT_MS)
+
+  try {
+    const response = await fetch('/api/analyze-feedback', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ text: input }),
+      signal: controller.signal,
+    })
+
+    if (!response.ok) {
+      throw new Error(`Analyze API failed with status ${response.status}`)
+    }
+
+    const data = (await response.json()) as unknown
+    if (!isAnalysisResult(data)) {
+      throw new Error('Analyze API returned an invalid result shape')
+    }
+
+    return createResult(data)
+  } finally {
+    window.clearTimeout(timeoutId)
+  }
 }
 
 function createResult(result: AnalysisResult): AnalysisResult {
@@ -212,6 +272,9 @@ function mockAnalyzeFeedback(input: string): AnalysisResult {
 }
 
 export async function analyzeFeedback(input: string): Promise<AnalysisResult> {
-  // TODO: replace mock analyzer with real LLM API call.
-  return mockAnalyzeFeedback(input)
+  try {
+    return await analyzeWithApi(input)
+  } catch {
+    return mockAnalyzeFeedback(input)
+  }
 }
