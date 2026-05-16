@@ -1,4 +1,6 @@
-import { useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { analyzeFeedback } from './services/feedbackAnalyzer'
+import type { AnalysisResult, AnalysisType, EvidenceItem, RiskLevel } from './types/analysis'
 import './App.css'
 
 const MAX_LENGTH = 1000
@@ -19,240 +21,6 @@ const templates = {
 }
 
 type TemplateKey = keyof typeof templates
-
-type AnalysisType = 'positive' | 'general' | 'negative' | 'risk' | 'unclear'
-type RiskLevel = 'none' | 'low' | 'medium' | 'high'
-
-type EvidenceItem = {
-  text: string
-  reason: string
-}
-
-type AnalysisResult = {
-  analysisType: AnalysisType
-  riskLevel: RiskLevel
-  summary: string
-  tags: {
-    focusObjects: string[]
-    emotionStates: string[]
-    evaluationTendencies: string[]
-    issueTypes: string[]
-    userDemands: string[]
-    riskSignals: string[]
-    suggestedActions: string[]
-  }
-  evidence: EvidenceItem[]
-  recommendedActions: string[]
-  confidence: number
-}
-
-function unique(items: string[]) {
-  return Array.from(new Set(items))
-}
-
-function includesAny(input: string, keywords: string[]) {
-  return keywords.some((keyword) => input.includes(keyword))
-}
-
-function createResult(result: AnalysisResult): AnalysisResult {
-  return {
-    ...result,
-    tags: {
-      focusObjects: unique(result.tags.focusObjects),
-      emotionStates: unique(result.tags.emotionStates),
-      evaluationTendencies: unique(result.tags.evaluationTendencies),
-      issueTypes: unique(result.tags.issueTypes),
-      userDemands: unique(result.tags.userDemands),
-      riskSignals: unique(result.tags.riskSignals),
-      suggestedActions: unique(result.tags.suggestedActions),
-    },
-    recommendedActions: unique(result.recommendedActions),
-  }
-}
-
-function analyzeText(input: string): AnalysisResult {
-  const text = input.trim()
-  if (text.length < 6 || !/[\u4e00-\u9fa5a-zA-Z0-9]/.test(text)) {
-    return createResult({
-      analysisType: 'unclear',
-      riskLevel: 'none',
-      summary: '当前文本过短或缺少可判断的客户反馈信息，暂无法形成可靠洞察。',
-      tags: {
-        focusObjects: ['无明确对象'],
-        emotionStates: ['平静'],
-        evaluationTendencies: ['中性反馈'],
-        issueTypes: ['无明显问题'],
-        userDemands: ['无明确诉求'],
-        riskSignals: ['无明显风险'],
-        suggestedActions: ['无需处理'],
-      },
-      evidence: [{ text: text || '空白输入', reason: '缺少完整语义或客户反馈上下文' }],
-      recommendedActions: ['补充一段完整客服会话、评论、电话转写或咨询文本后再分析'],
-      confidence: 0,
-    })
-  }
-
-  const highRisk = includesAny(text, ['公开投诉', '小红书', '黑猫', '12315', '消协', '曝光', '微博', '投诉', '经理', '主管'])
-  const repeated = includesAny(text, ['第三次', '第四次', '多次', '反复', '每次', '没人处理', '没人联系', '一直'])
-  const refund = includesAny(text, ['退款', '退钱', '赔偿', '补偿', '换货', '维修', '补发'])
-  const strongNegative = includesAny(text, ['愤怒', '非常失望', '太离谱', '敷衍', '寒心', '别买', '差评', '质量差', '坏了'])
-  const normalNegative = includesAny(text, ['不满意', '不满', '失望', '破损', '延迟', '慢', '不好用', '噪音', '效果不好', '故障', '问题'])
-  const positive = includesAny(text, ['满意', '很好', '好用', '超出预期', '推荐', '还会买', '喜欢', '不错', '五星', '赞'])
-  const question = includesAny(text, ['吗', '？', '?', '怎么', '如何', '咨询', '想问', '保修', '活动', '规则', '价格'])
-  const mixed = positive && (normalNegative || strongNegative || refund)
-
-  const focusObjects = [
-    includesAny(text, ['产品', '吹风机', '商品']) ? '产品本身' : '',
-    includesAny(text, ['质量', '坏', '故障', '磕碰']) ? '产品质量' : '',
-    includesAny(text, ['功能', '效果', '噪音']) ? '产品功能' : '',
-    includesAny(text, ['体验', '不好用', '好用']) ? '使用体验' : '',
-    includesAny(text, ['外观', '设计', '颜色']) ? '外观设计' : '',
-    includesAny(text, ['价格', '性价比', '贵', '便宜']) ? '价格/性价比' : '',
-    includesAny(text, ['物流', '配送', '快递', '延迟']) ? '物流配送' : '',
-    includesAny(text, ['包装', '破损']) ? '包装' : '',
-    includesAny(text, ['客服', '服务', '态度']) ? '客服服务' : '',
-    includesAny(text, ['售后', '退款', '换货', '维修', '补发']) ? '售后处理' : '',
-    includesAny(text, ['活动', '规则']) ? '活动规则' : '',
-    includesAny(text, ['保修', '质保']) ? '保修政策' : '',
-    includesAny(text, ['品牌', '官方', '信任']) ? '品牌信任' : '',
-  ].filter(Boolean)
-
-  if (highRisk || (repeated && refund) || (strongNegative && refund)) {
-    return createResult({
-      analysisType: 'risk',
-      riskLevel: 'high',
-      summary: '文本中同时出现强负面情绪、重复反馈或公开投诉/退款诉求，已具备升级风险信号，需要优先介入。',
-      tags: {
-        focusObjects: focusObjects.length ? focusObjects : ['售后处理', '客服服务'],
-        emotionStates: [strongNegative ? '强烈不满' : '愤怒', repeated ? '失望' : '焦虑'],
-        evaluationTendencies: ['负向反馈', '不再购买', '品牌信任下降'],
-        issueTypes: [
-          includesAny(text, ['坏', '质量', '破损', '磕碰']) ? '产品质量' : '售后未处理',
-          includesAny(text, ['客服', '敷衍', '踢皮球']) ? '服务态度差' : '',
-          repeated ? '售后未处理' : '',
-        ].filter(Boolean),
-        userDemands: [
-          refund ? '要求退款' : '',
-          includesAny(text, ['赔偿', '补偿']) ? '要求赔偿' : '',
-          includesAny(text, ['经理', '主管']) ? '要求主管介入' : '',
-          includesAny(text, ['人工']) ? '要求人工处理' : '',
-          '要求加急处理',
-        ].filter(Boolean),
-        riskSignals: [
-          repeated ? '重复反馈' : '',
-          repeated ? '多次未解决' : '',
-          includesAny(text, ['今天', '马上', '立即', '30 分钟']) ? '强时限要求' : '',
-          includesAny(text, ['投诉']) ? '投诉倾向' : '',
-          includesAny(text, ['公开投诉', '小红书', '黑猫']) ? '公开投诉倾向' : '',
-          includesAny(text, ['微博', '曝光']) ? '社媒曝光倾向' : '',
-          includesAny(text, ['12315', '消协']) ? '监管投诉倾向' : '',
-          includesAny(text, ['别买', '慎重购买']) ? '劝阻购买' : '',
-          '高情绪强度',
-        ].filter(Boolean),
-        suggestedActions: ['主管介入', '退款审核', '补偿安抚', '高优先级工单', 'SLA 告警'],
-      },
-      evidence: [
-        repeated ? { text: '第三次 / 第四次 / 多次反馈', reason: '出现重复反馈或多次未解决信号' } : { text: '强负面表达', reason: '情绪强度较高，存在升级可能' },
-        refund ? { text: '退款 / 退钱 / 赔偿', reason: '出现明确经济补偿类诉求' } : { text: '要求主管或人工介入', reason: '用户希望升级处理层级' },
-        highRisk ? { text: '公开投诉 / 12315 / 小红书 / 微博', reason: '出现公开化或监管投诉倾向' } : { text: '售后未处理', reason: '问题仍未闭环' },
-      ],
-      recommendedActions: ['主管优先介入，先安抚情绪并确认责任边界', '启动退款/补偿审核，给出明确处理时限', '创建高优先级工单并触发 SLA 跟进'],
-      confidence: 90,
-    })
-  }
-
-  if (mixed) {
-    return createResult({
-      analysisType: 'general',
-      riskLevel: 'low',
-      summary: '文本包含正向认可和局部负面体验，整体属于混合反馈，建议记录优点并跟进具体问题。',
-      tags: {
-        focusObjects: focusObjects.length ? focusObjects : ['产品本身', '使用体验'],
-        emotionStates: ['平静', '轻微不满'],
-        evaluationTendencies: ['混合反馈'],
-        issueTypes: [normalNegative ? '使用体验' : '无明显问题'],
-        userDemands: [question ? '咨询信息' : '表达评价', '提出建议'],
-        riskSignals: ['低风险关注', '负面体验'],
-        suggestedActions: ['记录反馈', '归入产品反馈池', '普通跟进'],
-      },
-      evidence: [
-        { text: '好用 / 满意 / 推荐', reason: '存在正向评价倾向' },
-        { text: '但是 / 不过 / 问题体验', reason: '同时存在待优化反馈' },
-      ],
-      recommendedActions: ['回复用户并感谢反馈', '将负面细节归入产品反馈池', '普通跟进具体问题是否需要售后处理'],
-      confidence: 78,
-    })
-  }
-
-  if (positive) {
-    return createResult({
-      analysisType: 'positive',
-      riskLevel: 'none',
-      summary: '文本以正向体验和推荐意愿为主，适合沉淀为正向案例或用户口碑素材。',
-      tags: {
-        focusObjects: focusObjects.length ? focusObjects : ['产品本身', '使用体验'],
-        emotionStates: ['满意'],
-        evaluationTendencies: ['正向反馈', includesAny(text, ['超出预期']) ? '超出预期' : '愿意推荐'],
-        issueTypes: ['无明显问题'],
-        userDemands: ['表达评价'],
-        riskSignals: ['无明显风险'],
-        suggestedActions: ['沉淀正向案例', '记录反馈'],
-      },
-      evidence: [{ text: '满意 / 好用 / 推荐 / 超出预期', reason: '正向情绪和推荐倾向明显' }],
-      recommendedActions: ['记录用户正向反馈', '可沉淀为正向案例，用于产品口碑或客服复盘'],
-      confidence: 84,
-    })
-  }
-
-  if (normalNegative || refund) {
-    return createResult({
-      analysisType: 'negative',
-      riskLevel: refund ? 'medium' : 'low',
-      summary: '文本反映了明确负面体验或售后诉求，但暂未出现公开投诉、监管投诉等高风险信号。',
-      tags: {
-        focusObjects: focusObjects.length ? focusObjects : ['产品质量', '售后处理'],
-        emotionStates: [strongNegative ? '不满' : '轻微不满'],
-        evaluationTendencies: ['负向反馈', refund ? '低于预期' : '品牌信任下降'],
-        issueTypes: [
-          includesAny(text, ['破损', '包装']) ? '包装破损' : '',
-          includesAny(text, ['延迟', '慢']) ? '物流延迟' : '',
-          includesAny(text, ['故障', '坏']) ? '功能故障' : '',
-          includesAny(text, ['噪音']) ? '噪音偏大' : '',
-          includesAny(text, ['效果']) ? '效果不佳' : '',
-          includesAny(text, ['客服', '服务']) ? '服务态度差' : '',
-          refund ? '售后未处理' : '使用体验',
-        ].filter(Boolean),
-        userDemands: [refund ? '要求退款' : '寻求帮助'],
-        riskSignals: [refund ? '轻微不满' : '负面体验', refund ? '低风险关注' : '无明显风险'],
-        suggestedActions: [refund ? '售后跟进' : '普通跟进', refund ? '人工客服介入' : '记录反馈'],
-      },
-      evidence: [
-        { text: '破损 / 故障 / 不满意 / 不好用', reason: '识别到负向体验描述' },
-        refund ? { text: '退款 / 换货 / 维修', reason: '出现售后处理诉求' } : { text: '未出现公开投诉', reason: '暂无明显升级风险信号' },
-      ],
-      recommendedActions: refund ? ['创建跟进任务，由售后确认问题和处理方案', '必要时转人工客服补充安抚'] : ['记录负面反馈并普通跟进', '将问题归类后同步给对应业务团队'],
-      confidence: refund ? 82 : 74,
-    })
-  }
-
-  return createResult({
-    analysisType: 'general',
-    riskLevel: 'none',
-    summary: '文本更接近咨询或中性表达，当前未发现明显负面体验或升级风险。',
-    tags: {
-      focusObjects: focusObjects.length ? focusObjects : ['无明确对象'],
-      emotionStates: [question ? '疑惑' : '平静'],
-      evaluationTendencies: ['中性反馈'],
-      issueTypes: ['无明显问题'],
-      userDemands: [question ? '咨询信息' : '无明确诉求'],
-      riskSignals: ['无明显风险'],
-      suggestedActions: [question ? '回复用户咨询' : '记录反馈'],
-    },
-    evidence: [{ text: question ? '咨询 / 如何 / 吗' : '中性描述', reason: '未识别到明显投诉、退款或公开化表达' }],
-    recommendedActions: [question ? '回复用户咨询，并提供清晰规则或处理路径' : '记录反馈，无需升级处理'],
-    confidence: question ? 76 : 64,
-  })
-}
 
 const analysisTypeLabels: Record<AnalysisType, string> = {
   positive: '正向反馈 · Positive',
@@ -598,25 +366,42 @@ function Logic() {
 function Demo() {
   const [currentTpl, setCurrentTpl] = useState<TemplateKey>('chat')
   const [text, setText] = useState(templates.chat)
-  const [result, setResult] = useState<AnalysisResult>(() => analyzeText(templates.chat))
+  const [result, setResult] = useState<AnalysisResult | null>(null)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [ticketCreated, setTicketCreated] = useState(false)
   const resultRef = useRef<HTMLDivElement>(null)
-  const actionButtonLabel = getActionButtonLabel(result)
+  const actionButtonLabel = result ? getActionButtonLabel(result) : ''
+
+  useEffect(() => {
+    let isMounted = true
+
+    async function loadInitialResult() {
+      const initialResult = await analyzeFeedback(templates.chat)
+      if (isMounted) setResult(initialResult)
+    }
+
+    void loadInitialResult()
+
+    return () => {
+      isMounted = false
+    }
+  }, [])
 
   function selectTemplate(key: TemplateKey) {
     setCurrentTpl(key)
     setText(templates[key])
   }
 
-  function analyze() {
+  async function analyze() {
     setIsAnalyzing(true)
-    window.setTimeout(() => {
-      setResult(analyzeText(text))
+    try {
+      const nextResult = await analyzeFeedback(text)
+      setResult(nextResult)
       setTicketCreated(false)
-      setIsAnalyzing(false)
       resultRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
-    }, 700)
+    } finally {
+      setIsAnalyzing(false)
+    }
   }
 
   return (
@@ -654,7 +439,7 @@ function Demo() {
             </div>
           </div>
           <p className="demo-hint">适用于客服会话、电话转写、电商评论、社媒反馈等客户反馈文本。非客户反馈类内容可能无法生成有效风险判断。</p>
-          <div className="result" ref={resultRef}>
+          {result ? <div className="result" ref={resultRef}>
             <div className="result-head">
               <div className="left">
                 <span className="ai-mark"><SparkIcon /></span>
@@ -708,7 +493,7 @@ function Demo() {
                 </button>
               ) : null}
             </div>
-          </div>
+          </div> : null}
         </div>
       </div>
     </section>
