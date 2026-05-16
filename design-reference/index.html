@@ -1,0 +1,532 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AI 客户升级风险识别 Demo · Escalation Risk Detector</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,500;1,400&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Noto+Serif+SC:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- ============ NAV ============ -->
+<header class="nav">
+  <div class="container nav-inner">
+    <div class="brand">
+      <span class="brand-mark"></span>
+      <span>Escalation&nbsp;<em style="font-style: italic; color: var(--muted);">/</em>&nbsp;升级风险识别</span>
+    </div>
+    <nav class="nav-links">
+      <a href="#hero">概述</a>
+      <a href="#usecases">应用场景</a>
+      <a href="#logic">产品逻辑</a>
+      <a href="#demo">体验 Demo</a>
+    </nav>
+    <a href="#" class="nav-cta" style="background-color: rgb(250, 248, 244)"> 返回作品集 </a>
+  </div>
+</header>
+
+<!-- ============ SECTION 1 — HERO ============ -->
+<section id="hero" class="hero">
+  <div class="container">
+    <div class="hero-grid">
+      <div class="hero-copy">
+        <span class="eyebrow">Case Study · AI Product Demo</span>
+        <h1>在投诉爆发前，<br/>识别<em>升级风险</em></h1>
+        <p class="hero-sub">AI 客户升级风险识别 Demo</p>
+        <p class="hero-en">AI Escalation Risk Detector for Customer Conversations</p>
+        <p class="hero-desc">输入一段客服会话、电话转写或电商评论，AI 会识别其中的情绪升级、重复投诉、退款诉求、公开投诉风险，并给出可解释的判断依据和处理建议。</p>
+        <div class="cta-row">
+          <a href="#demo" class="btn btn-primary">体验 Demo</a>
+          <a href="#usecases" class="btn btn-ghost">查看应用场景</a>
+        </div>
+      </div>
+
+      <!-- Hero preview card -->
+      <div class="hero-preview" aria-label="产品预览">
+        <div class="preview-head">
+          <div>
+            <div class="preview-title">电商售后会话 · 客户多次反馈未解决</div>
+            <div class="preview-sub">订单 #A2041 · 12:48 · 进行中</div>
+          </div>
+          <span class="preview-store">官方旗舰店</span>
+        </div>
+
+        <div class="hero-chat">
+          <div class="hero-bubble">
+            <div class="hero-avatar">客</div>
+            <div class="hero-msg">这个问题<span class="hl-strong">我已经反馈第三次了</span>，怎么还是没人处理？</div>
+          </div>
+          <div class="hero-bubble">
+            <div class="hero-avatar">客</div>
+            <div class="hero-msg">如果今天再不解决，<span class="hl-strong">我要求全额退款</span>，否则<span class="hl-strong">我会去平台公开投诉</span>。</div>
+          </div>
+          <div class="hero-bubble">
+            <div class="hero-avatar">客</div>
+            <div class="hero-msg"><span class="hl-strong">真的非常失望</span>，你们服务态度太敷衍了。</div>
+          </div>
+        </div>
+
+        <div class="hero-ai">
+          <div class="hero-ai-head">
+            <span class="ai-mark">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4"/><path d="M12 18v4"/><path d="M2 12h4"/><path d="M18 12h4"/></svg>
+            </span>
+            <span class="hero-ai-label">AI 识别结果</span>
+          </div>
+          <div class="ai-tags">
+            <span class="tag high"><span class="dot"></span>高风险</span>
+            <span class="tag"><span class="dot" style="background:#C49050"></span>重复投诉</span>
+            <span class="tag"><span class="dot" style="background:#A85F38"></span>退款诉求</span>
+            <span class="tag"><span class="dot" style="background:#B85C3E"></span>公开投诉倾向</span>
+          </div>
+          <div class="ai-action">
+            <span class="ai-action-pill">建议动作</span>
+            <span>主管介入 + 启动退款审核流程</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SECTION 2 — USE CASES ============ -->
+<section id="usecases" class="usecases">
+  <div class="container">
+    <div class="section-head">
+      <span class="eyebrow">02 · Use Cases</span>
+      <h2>三类反馈数据，<br/>同一套识别能力</h2>
+      <p>从在线客服会话、电话转写、到电商评论和社媒反馈，AI 从不同形态的客户文本中识别出同样的升级信号。</p>
+    </div>
+
+    <div class="uc-stack">
+
+      <!-- 场景 1：在线客服会话 -->
+      <article class="uc-row" data-uc="chat">
+        <header class="uc-row-head">
+          <span class="uc-num">SCENE 01</span>
+          <h3>在线客服会话</h3>
+          <span class="uc-source">电商在线客服系统 · 实时对话</span>
+        </header>
+
+        <div class="uc-row-body">
+          <div class="uc-input chat-pane">
+            <div class="chat-pane-head">
+              <span class="chat-store">官方旗舰店 · 售后客服</span>
+              <span class="chat-meta">订单 #A2041 · 12:48</span>
+            </div>
+            <div class="chat">
+              <div class="bubble from-customer">
+                <div class="avatar cust">客</div>
+                <div class="msg">您好，我上周买的吹风机用了三次就坏了，已经申请过售后了。</div>
+              </div>
+              <div class="bubble from-agent">
+                <div class="avatar agent">服</div>
+                <div class="msg">您好，麻烦提供一下订单号，我帮您查一下。</div>
+              </div>
+              <div class="bubble from-customer">
+                <div class="avatar cust">客</div>
+                <div class="msg">订单号 <span class="mono-inline">A2041</span>，<span class="hl-strong">这已经是我第三次反馈了</span>，每次都让我重新提交。</div>
+              </div>
+              <div class="bubble from-agent">
+                <div class="avatar agent">服</div>
+                <div class="msg">抱歉给您带来困扰，我这边再帮您加急一下。</div>
+              </div>
+              <div class="bubble from-customer">
+                <div class="avatar cust">客</div>
+                <div class="msg">不用加急了，<span class="hl-strong">我要求今天全额退款</span>，否则我会去<span class="hl-strong">黑猫和小红书公开投诉</span>。</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="uc-bridge" aria-hidden="true">
+            <span class="uc-bridge-line"></span>
+            <span class="uc-bridge-label">AI 识别</span>
+            <span class="uc-bridge-line"></span>
+          </div>
+
+          <div class="uc-output">
+            <div class="uc-output-head">AI 识别结果</div>
+            <div class="uc-tags">
+              <span class="tag high"><span class="dot"></span>高风险</span>
+              <span class="tag"><span class="dot" style="background:#C49050"></span>重复投诉 ×3</span>
+              <span class="tag"><span class="dot" style="background:#A85F38"></span>退款诉求</span>
+              <span class="tag"><span class="dot" style="background:#B85C3E"></span>公开投诉倾向</span>
+            </div>
+            <dl class="uc-fields">
+              <div><dt>情绪</dt><dd>不满 → 愤怒</dd></div>
+              <div><dt>问题</dt><dd>售后未处理</dd></div>
+              <div><dt>诉求</dt><dd>全额退款</dd></div>
+            </dl>
+            <div class="uc-action">
+              <span class="pill">建议动作</span>
+              <span>主管介入 + 启动退款审核 + 标记重点跟进</span>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- 场景 2：电话转写 -->
+      <article class="uc-row" data-uc="call">
+        <header class="uc-row-head">
+          <span class="uc-num">SCENE 02</span>
+          <h3>电话转写 · 客服通话记录</h3>
+          <span class="uc-source">语音转文字 (ASR) · 升级风险识别</span>
+        </header>
+
+        <div class="uc-row-body">
+          <div class="uc-input call-pane">
+            <div class="call-recorder">
+              <div class="call-meta">
+                <span class="call-icon-wrap">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                </span>
+                <div>
+                  <div class="call-title">客户来电 · 13800****128</div>
+                  <div class="call-sub">通话时长 02:14 · 已完成第 4 次来电</div>
+                </div>
+              </div>
+              <div class="waveform" aria-hidden="true">
+                <span style="height:30%"></span><span style="height:70%"></span><span style="height:50%"></span><span style="height:90%"></span><span style="height:60%"></span><span style="height:80%"></span><span style="height:40%"></span><span style="height:75%"></span><span style="height:55%"></span><span style="height:88%"></span><span style="height:45%"></span><span style="height:65%"></span><span style="height:30%"></span><span style="height:80%"></span><span style="height:55%"></span><span style="height:70%"></span><span style="height:35%"></span><span style="height:62%"></span>
+              </div>
+            </div>
+
+            <div class="call-transcript">
+              <div class="call-tr-head">ASR 转写文本</div>
+              <div class="call-line">
+                <span class="ts">00:32</span>
+                <span class="who">客户</span>
+                <span class="line"><span class="hl-strong">这已经是我第四次打电话了</span>，每次都说会有人联系我，<span class="hl-strong">没人联系我</span>。</span>
+              </div>
+              <div class="call-line">
+                <span class="ts">01:05</span>
+                <span class="who">客服</span>
+                <span class="line">非常抱歉给您带来困扰，我先帮您记录一下情况……</span>
+              </div>
+              <div class="call-line">
+                <span class="ts">01:18</span>
+                <span class="who">客户</span>
+                <span class="line"><span class="hl-strong">我不想再听抱歉了</span>，给我<span class="hl-strong">找你们经理</span>，要不就退钱。</span>
+              </div>
+              <div class="call-line">
+                <span class="ts">01:46</span>
+                <span class="who">客户</span>
+                <span class="line">再处理不了我就去消协了，你们这种态度太离谱。</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="uc-bridge" aria-hidden="true">
+            <span class="uc-bridge-line"></span>
+            <span class="uc-bridge-label">AI 识别</span>
+            <span class="uc-bridge-line"></span>
+          </div>
+
+          <div class="uc-output">
+            <div class="uc-output-head">AI 识别结果</div>
+            <div class="uc-tags">
+              <span class="tag high"><span class="dot"></span>高风险</span>
+              <span class="tag"><span class="dot" style="background:#C49050"></span>重复投诉 ×4</span>
+              <span class="tag"><span class="dot" style="background:#A85F38"></span>承诺未兑现</span>
+              <span class="tag"><span class="dot" style="background:#B85C3E"></span>升级主管</span>
+            </div>
+            <dl class="uc-fields">
+              <div><dt>情绪</dt><dd>不耐烦 → 愤怒</dd></div>
+              <div><dt>问题</dt><dd>反复来电 / 悬置</dd></div>
+              <div><dt>诉求</dt><dd>升级处理 / 退款</dd></div>
+            </dl>
+            <div class="uc-action">
+              <span class="pill">建议动作</span>
+              <span>触发 SLA 告警 + 主管 30 分钟内回拨</span>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- 场景 3：电商评论 / 社媒反馈 -->
+      <article class="uc-row" data-uc="review">
+        <header class="uc-row-head">
+          <span class="uc-num">SCENE 03</span>
+          <h3>电商评论 / 社媒反馈</h3>
+          <span class="uc-source">公开评论 + 社媒舆情 · 品牌风险识别</span>
+        </header>
+
+        <div class="uc-row-body">
+          <div class="uc-input review-pane">
+            <!-- 电商评论卡 -->
+            <div class="review-card">
+              <div class="review-platform">
+                <span class="platform-pill">淘宝评价</span>
+                <span class="stars">
+                  <span class="s">★</span><span class="s gray">★</span><span class="s gray">★</span><span class="s gray">★</span><span class="s gray">★</span>
+                  <span class="rating">1.0</span>
+                </span>
+              </div>
+              <div class="review-meta">
+                <span class="reviewer">用户 m***8</span>
+                <span class="dot-sep">·</span>
+                <span class="product">购买商品：吹风机 · 大功率款</span>
+              </div>
+              <div class="review-body">
+                包装严重破损，里面的产品也磕碰了。<span class="hl-strong">质量差</span>，<span class="hl-strong">客服一直踢皮球</span>，让我去找快递，快递让我找商家，已经准备 <span class="hl-strong">12315 投诉</span>了，<span class="hl-strong">提醒大家别买</span>。
+              </div>
+            </div>
+
+            <!-- 社媒反馈 -->
+            <div class="weibo-card">
+              <div class="weibo-head">
+                <div class="weibo-avatar">L</div>
+                <div>
+                  <div class="weibo-user">小琳的日常 <span class="weibo-handle">@xiaolin_daily</span></div>
+                  <div class="weibo-time">微博 · 2 小时前 · 公开</div>
+                </div>
+              </div>
+              <div class="weibo-body">
+                <span class="mention">@品牌官方</span> 这种售后真的让人寒心，<span class="hl-strong">建议大家慎重购买</span>。同样的问题反馈了三次还是没人处理 😤
+              </div>
+              <div class="weibo-stats">
+                <span>转发 248</span><span>评论 96</span><span>点赞 1.2k</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="uc-bridge" aria-hidden="true">
+            <span class="uc-bridge-line"></span>
+            <span class="uc-bridge-label">AI 识别</span>
+            <span class="uc-bridge-line"></span>
+          </div>
+
+          <div class="uc-output">
+            <div class="uc-output-head">AI 识别结果</div>
+            <div class="uc-tags">
+              <span class="tag high"><span class="dot"></span>高风险</span>
+              <span class="tag"><span class="dot" style="background:#B85C3E"></span>公开投诉</span>
+              <span class="tag"><span class="dot" style="background:#A85F38"></span>产品质量</span>
+              <span class="tag"><span class="dot" style="background:#C49050"></span>服务态度</span>
+              <span class="tag"><span class="dot" style="background:#B85C3E"></span>舆情风险</span>
+            </div>
+            <dl class="uc-fields">
+              <div><dt>来源</dt><dd>电商 + 微博</dd></div>
+              <div><dt>影响</dt><dd>公开传播 + @官方</dd></div>
+              <div><dt>诉求</dt><dd>赔偿 / 责任明确</dd></div>
+            </dl>
+            <div class="uc-action">
+              <span class="pill">建议动作</span>
+              <span>品牌公关关注 + 24h 内主动联系客户</span>
+            </div>
+          </div>
+        </div>
+      </article>
+
+    </div>
+  </div>
+</section>
+
+<!-- ============ SECTION 3 — PRODUCT LOGIC ============ -->
+<section id="logic" class="logic">
+  <div class="container">
+    <div class="section-head">
+      <span class="eyebrow">03 · Product Logic</span>
+      <h2>从一句客户反馈，<br/>到一个可执行的工单</h2>
+      <p>五个步骤，一条可解释的链路。识别不是终点，输出可执行的下一步才是。</p>
+    </div>
+
+    <!-- Flow diagram (5 steps, single horizontal line) -->
+    <div class="flow-line">
+      <div class="flow-rail" aria-hidden="true"></div>
+
+      <div class="flow-step">
+        <div class="flow-dot"><span>1</span></div>
+        <div class="flow-card">
+          <div class="flow-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          </div>
+          <h4>客户反馈输入</h4>
+          <p>在线会话 · 电话转写 · 评论舆情</p>
+        </div>
+      </div>
+
+      <div class="flow-step">
+        <div class="flow-dot"><span>2</span></div>
+        <div class="flow-card">
+          <div class="flow-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/></svg>
+          </div>
+          <h4>AI 语义识别</h4>
+          <p>情绪 · 意图 · 实体 · 诉求</p>
+        </div>
+      </div>
+
+      <div class="flow-step">
+        <div class="flow-dot"><span>3</span></div>
+        <div class="flow-card">
+          <div class="flow-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>
+          </div>
+          <h4>风险信号判断</h4>
+          <p>升级 · 重复 · 公开投诉倾向</p>
+        </div>
+      </div>
+
+      <div class="flow-step">
+        <div class="flow-dot"><span>4</span></div>
+        <div class="flow-card">
+          <div class="flow-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41 13.42 20.58a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><path d="M7 7h.01"/></svg>
+          </div>
+          <h4>标签 + 解释</h4>
+          <p>结构化标签 + 判断依据</p>
+        </div>
+      </div>
+
+      <div class="flow-step">
+        <div class="flow-dot last"><span>5</span></div>
+        <div class="flow-card">
+          <div class="flow-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 15l2 2 4-4"/></svg>
+          </div>
+          <h4>预警 / 工单建议</h4>
+          <p>进入客服处理闭环</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="flow-divider"><span>设计原则</span></div>
+
+    <!-- Three principles -->
+    <div class="principles">
+      <div class="principle">
+        <div class="num">PRINCIPLE 01</div>
+        <h3>Detect</h3>
+        <div class="en">识别</div>
+        <p>从对话和文本中识别情绪走向、问题类型、客户真实诉求和升级信号，不依赖关键词命中。</p>
+      </div>
+      <div class="principle">
+        <div class="num">PRINCIPLE 02</div>
+        <h3>Explain</h3>
+        <div class="en">解释</div>
+        <p>每条结果都附带触发依据和置信度，客服与主管能看懂"为什么这条是高风险"。</p>
+      </div>
+      <div class="principle">
+        <div class="num">PRINCIPLE 03</div>
+        <h3>Act</h3>
+        <div class="en">建议动作</div>
+        <p>识别不是终点：直接输出可执行的下一步——转主管、退款审核、品牌公关或工单。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SECTION 4 — INTERACTIVE DEMO ============ -->
+<section id="demo" class="demo">
+  <div class="container">
+    <div class="section-head">
+      <span class="eyebrow">04 · Try it</span>
+      <h2>把一段真实客户文本<br/>交给 AI 分析</h2>
+      <p>选择一个场景模板，或直接粘贴你自己的客户对话、评论、转写文本。点击「开始分析」，看 AI 输出什么。</p>
+    </div>
+
+    <div class="demo-shell">
+      <!-- Templates -->
+      <div class="template-row" id="templateRow">
+        <span class="lbl">场景模板</span>
+        <button class="tpl-btn active" data-tpl="chat">在线客服会话</button>
+        <button class="tpl-btn" data-tpl="call">电话转写</button>
+        <button class="tpl-btn" data-tpl="review">电商 / 社媒评论</button>
+        <button class="tpl-btn" data-tpl="blank">空白：自定义输入</button>
+      </div>
+
+      <!-- Composer -->
+      <div class="composer">
+        <textarea id="composer" maxlength="1000" placeholder="选择上方模板快速填充示例，或粘贴一段客服会话、电话转写、评论文本，测试 AI 如何识别升级风险。"></textarea>
+        <div class="composer-footer">
+          <span class="composer-meta" id="metaCounter">0 / 1000 字符</span>
+          <button class="btn-analyze" id="analyzeBtn">开始分析</button>
+        </div>
+      </div>
+
+      <p class="demo-hint">适用于客服会话、电话转写、电商评论、社媒反馈等客户反馈文本。非客户反馈类内容可能无法生成有效风险判断。</p>
+
+      <!-- Result -->
+      <div class="result" id="result">
+        <div class="result-head">
+          <div class="left">
+            <span class="ai-mark">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4"/><path d="M12 18v4"/><path d="M2 12h4"/><path d="M18 12h4"/></svg>
+            </span>
+            <span class="title">AI 分析结果 · Escalation Risk Report</span>
+          </div>
+          <span class="risk-badge high" id="riskBadge"><span class="dot"></span>高风险 · High Risk</span>
+        </div>
+
+        <div class="result-body">
+          <div class="result-col">
+            <div class="r-block">
+              <div class="k">情绪识别 · Sentiment</div>
+              <div class="v" id="rSentiment">中性 → 不满 → 愤怒（情绪持续升级）</div>
+            </div>
+            <div class="r-block">
+              <div class="k">问题类型 · Issue Type</div>
+              <div class="v" id="rIssue">售后未处理 / 重复投诉</div>
+            </div>
+            <div class="r-block">
+              <div class="k">客户诉求 · Demand</div>
+              <div class="v" id="rDemand">全额退款 + 主管介入</div>
+            </div>
+            <div class="r-block">
+              <div class="k">风险信号 · Signals</div>
+              <ul id="rSignals">
+                <li>提及"第三次反馈" → 重复投诉信号</li>
+                <li>明确要求"全额退款" → 强诉求信号</li>
+                <li>提及"平台公开投诉" → 公开投诉倾向</li>
+                <li>使用"非常失望 / 敷衍"等强情绪词</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="result-col">
+            <div class="r-block">
+              <div class="k">判断依据 · Explanation</div>
+              <div class="v" id="rExplain">客户在三句话内出现"重复反馈 + 退款 + 公开投诉"三类升级信号，且情绪从客观陈述快速转为强烈不满，符合高风险模式。</div>
+              <div class="confidence">
+                <span>Confidence</span>
+                <div class="confidence-bar"><span style="width:88%"></span></div>
+                <span>88%</span>
+              </div>
+            </div>
+            <div class="r-block">
+              <div class="k">建议动作 · Recommended Actions</div>
+              <div class="action-list">
+                <div class="action-item"><span class="num">1</span><span>立即转主管介入，优先安抚客户情绪</span></div>
+                <div class="action-item"><span class="num">2</span><span>启动退款审核流程，承诺明确处理时间</span></div>
+                <div class="action-item"><span class="num">3</span><span>标记为重点跟进工单，48 小时内回访</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="result-footer">
+          <div class="footer-left">
+            <span class="meta">分析耗时 1.2s · 模型版本 v0.4</span>
+            <span class="footer-note">仅 Demo 演示，不会保存数据</span>
+          </div>
+          <button class="btn-ticket" id="ticketBtn">创建高优先级工单</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FOOTER ============ -->
+<footer>
+  <div class="container footer-inner">
+    <div>AI 客户升级风险识别 · Case Study</div>
+    <div class="credit">DESIGN PROTOTYPE · 2026 · NEXT.JS + TAILWIND READY</div>
+  </div>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>
