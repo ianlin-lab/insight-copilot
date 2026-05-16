@@ -20,89 +20,253 @@ const templates = {
 
 type TemplateKey = keyof typeof templates
 
-type ResultData = {
-  risk: { label: string; cls: string }
-  sentiment: string
-  issue: string
-  demand: string
-  signals: string[]
-  explain: string
-  confidence: number
-  actions: string[]
+type AnalysisType = 'positive' | 'general' | 'negative' | 'risk' | 'unclear'
+type RiskLevel = 'none' | 'low' | 'medium' | 'high'
+
+type EvidenceItem = {
+  text: string
+  reason: string
 }
 
-const results: Record<TemplateKey, ResultData> = {
-  chat: {
-    risk: { label: '高风险 · High Risk', cls: 'high' },
-    sentiment: '中性 → 不满 → 愤怒（情绪持续升级）',
-    issue: '售后未处理 / 重复投诉',
-    demand: '全额退款 + 主管介入',
-    signals: [
-      '提及"第三次反馈" → 重复投诉信号',
-      '明确要求"全额退款" → 强诉求信号',
-      '提及"黑猫 / 小红书公开投诉" → 公开投诉倾向',
-      '使用"非常失望 / 敷衍"等强情绪词',
-    ],
-    explain:
-      '客户在三句话内出现"重复反馈 + 退款 + 公开投诉"三类升级信号，且情绪从客观陈述快速转为强烈不满，符合高风险模式。',
-    confidence: 88,
-    actions: [
-      '立即转主管介入，优先安抚客户情绪',
-      '启动退款审核流程，承诺明确处理时间',
-      '标记为重点跟进工单，48 小时内回访',
-    ],
-  },
-  call: {
-    risk: { label: '高风险 · High Risk', cls: 'high' },
-    sentiment: '不耐烦 → 愤怒（已多次接触未解决）',
-    issue: '反复来电 / 承诺未兑现',
-    demand: '升级处理 或 退款',
-    signals: [
-      '"第四次打电话" → 重复投诉 ×4',
-      '"没人联系我" → 承诺未兑现',
-      '"找你们经理" → 主动要求升级',
-      '"不想再听抱歉" → 拒绝标准话术',
-    ],
-    explain:
-      '客户已四次来电，本次明确拒绝程式化道歉并主动要求升级主管，属于典型升级前一刻信号，必须由主管直接介入。',
-    confidence: 91,
-    actions: [
-      '触发 SLA 告警，主管 30 分钟内回拨',
-      '检查历史工单，找出之前未闭环的根因',
-      '主动回访 + 补偿方案，避免监管投诉',
-    ],
-  },
-  review: {
-    risk: { label: '高风险 · High Risk', cls: 'high' },
-    sentiment: '不满 + 公开表达 + 劝阻他人',
-    issue: '产品质量 + 服务态度 + 公开投诉',
-    demand: '退款 / 赔偿 + 责任明确',
-    signals: [
-      '★1.0 + "12315 投诉" → 监管投诉倾向',
-      '"质量差 / 客服踢皮球" → 产品 + 服务双痛点',
-      '"提醒大家别买" → 劝阻他人，品牌伤害',
-      '社媒 @品牌官方 → 公开施压',
-    ],
-    explain:
-      '内容已具备"低评分 + 监管投诉 + 公开劝退 + 社媒@官方"四个公开化信号，对品牌口碑有直接负面影响。',
-    confidence: 85,
-    actions: [
-      '品牌公关 24h 内主动联系，私下处理',
-      '确认快递责任并提供补偿方案',
-      '监控该评论扩散情况，必要时官方回应',
-    ],
-  },
-  blank: {
-    risk: { label: '低风险 · Low', cls: 'high' },
-    sentiment: '需要更多文本以判断',
-    issue: '—',
-    demand: '—',
-    signals: ['当前未识别到明确升级信号'],
-    explain:
-      '文本过短或不属于客户反馈类内容，模型无法给出可靠判断。建议至少提供一轮完整对话或一条完整反馈。',
-    confidence: 0,
-    actions: ['粘贴客户原始文本', '或选择上方任一场景模板'],
-  },
+type AnalysisResult = {
+  analysisType: AnalysisType
+  riskLevel: RiskLevel
+  summary: string
+  tags: {
+    focusObjects: string[]
+    emotionStates: string[]
+    evaluationTendencies: string[]
+    issueTypes: string[]
+    userDemands: string[]
+    riskSignals: string[]
+    suggestedActions: string[]
+  }
+  evidence: EvidenceItem[]
+  recommendedActions: string[]
+  confidence: number
+}
+
+function unique(items: string[]) {
+  return Array.from(new Set(items))
+}
+
+function includesAny(input: string, keywords: string[]) {
+  return keywords.some((keyword) => input.includes(keyword))
+}
+
+function createResult(result: AnalysisResult): AnalysisResult {
+  return {
+    ...result,
+    tags: {
+      focusObjects: unique(result.tags.focusObjects),
+      emotionStates: unique(result.tags.emotionStates),
+      evaluationTendencies: unique(result.tags.evaluationTendencies),
+      issueTypes: unique(result.tags.issueTypes),
+      userDemands: unique(result.tags.userDemands),
+      riskSignals: unique(result.tags.riskSignals),
+      suggestedActions: unique(result.tags.suggestedActions),
+    },
+    recommendedActions: unique(result.recommendedActions),
+  }
+}
+
+function analyzeText(input: string): AnalysisResult {
+  const text = input.trim()
+  if (text.length < 6 || !/[\u4e00-\u9fa5a-zA-Z0-9]/.test(text)) {
+    return createResult({
+      analysisType: 'unclear',
+      riskLevel: 'none',
+      summary: '当前文本过短或缺少可判断的客户反馈信息，暂无法形成可靠洞察。',
+      tags: {
+        focusObjects: ['无明确对象'],
+        emotionStates: ['平静'],
+        evaluationTendencies: ['中性反馈'],
+        issueTypes: ['无明显问题'],
+        userDemands: ['无明确诉求'],
+        riskSignals: ['无明显风险'],
+        suggestedActions: ['无需处理'],
+      },
+      evidence: [{ text: text || '空白输入', reason: '缺少完整语义或客户反馈上下文' }],
+      recommendedActions: ['补充一段完整客服会话、评论、电话转写或咨询文本后再分析'],
+      confidence: 0,
+    })
+  }
+
+  const highRisk = includesAny(text, ['公开投诉', '小红书', '黑猫', '12315', '消协', '曝光', '微博', '投诉', '经理', '主管'])
+  const repeated = includesAny(text, ['第三次', '第四次', '多次', '反复', '每次', '没人处理', '没人联系', '一直'])
+  const refund = includesAny(text, ['退款', '退钱', '赔偿', '补偿', '换货', '维修', '补发'])
+  const strongNegative = includesAny(text, ['愤怒', '非常失望', '太离谱', '敷衍', '寒心', '别买', '差评', '质量差', '坏了'])
+  const normalNegative = includesAny(text, ['不满意', '不满', '失望', '破损', '延迟', '慢', '不好用', '噪音', '效果不好', '故障', '问题'])
+  const positive = includesAny(text, ['满意', '很好', '好用', '超出预期', '推荐', '还会买', '喜欢', '不错', '五星', '赞'])
+  const question = includesAny(text, ['吗', '？', '?', '怎么', '如何', '咨询', '想问', '保修', '活动', '规则', '价格'])
+  const mixed = positive && (normalNegative || strongNegative || refund)
+
+  const focusObjects = [
+    includesAny(text, ['产品', '吹风机', '商品']) ? '产品本身' : '',
+    includesAny(text, ['质量', '坏', '故障', '磕碰']) ? '产品质量' : '',
+    includesAny(text, ['功能', '效果', '噪音']) ? '产品功能' : '',
+    includesAny(text, ['体验', '不好用', '好用']) ? '使用体验' : '',
+    includesAny(text, ['外观', '设计', '颜色']) ? '外观设计' : '',
+    includesAny(text, ['价格', '性价比', '贵', '便宜']) ? '价格/性价比' : '',
+    includesAny(text, ['物流', '配送', '快递', '延迟']) ? '物流配送' : '',
+    includesAny(text, ['包装', '破损']) ? '包装' : '',
+    includesAny(text, ['客服', '服务', '态度']) ? '客服服务' : '',
+    includesAny(text, ['售后', '退款', '换货', '维修', '补发']) ? '售后处理' : '',
+    includesAny(text, ['活动', '规则']) ? '活动规则' : '',
+    includesAny(text, ['保修', '质保']) ? '保修政策' : '',
+    includesAny(text, ['品牌', '官方', '信任']) ? '品牌信任' : '',
+  ].filter(Boolean)
+
+  if (highRisk || (repeated && refund) || (strongNegative && refund)) {
+    return createResult({
+      analysisType: 'risk',
+      riskLevel: 'high',
+      summary: '文本中同时出现强负面情绪、重复反馈或公开投诉/退款诉求，已具备升级风险信号，需要优先介入。',
+      tags: {
+        focusObjects: focusObjects.length ? focusObjects : ['售后处理', '客服服务'],
+        emotionStates: [strongNegative ? '强烈不满' : '愤怒', repeated ? '失望' : '焦虑'],
+        evaluationTendencies: ['负向反馈', '不再购买', '品牌信任下降'],
+        issueTypes: [
+          includesAny(text, ['坏', '质量', '破损', '磕碰']) ? '产品质量' : '售后未处理',
+          includesAny(text, ['客服', '敷衍', '踢皮球']) ? '服务态度差' : '',
+          repeated ? '售后未处理' : '',
+        ].filter(Boolean),
+        userDemands: [
+          refund ? '要求退款' : '',
+          includesAny(text, ['赔偿', '补偿']) ? '要求赔偿' : '',
+          includesAny(text, ['经理', '主管']) ? '要求主管介入' : '',
+          includesAny(text, ['人工']) ? '要求人工处理' : '',
+          '要求加急处理',
+        ].filter(Boolean),
+        riskSignals: [
+          repeated ? '重复反馈' : '',
+          repeated ? '多次未解决' : '',
+          includesAny(text, ['今天', '马上', '立即', '30 分钟']) ? '强时限要求' : '',
+          includesAny(text, ['投诉']) ? '投诉倾向' : '',
+          includesAny(text, ['公开投诉', '小红书', '黑猫']) ? '公开投诉倾向' : '',
+          includesAny(text, ['微博', '曝光']) ? '社媒曝光倾向' : '',
+          includesAny(text, ['12315', '消协']) ? '监管投诉倾向' : '',
+          includesAny(text, ['别买', '慎重购买']) ? '劝阻购买' : '',
+          '高情绪强度',
+        ].filter(Boolean),
+        suggestedActions: ['主管介入', '退款审核', '补偿安抚', '高优先级工单', 'SLA 告警'],
+      },
+      evidence: [
+        repeated ? { text: '第三次 / 第四次 / 多次反馈', reason: '出现重复反馈或多次未解决信号' } : { text: '强负面表达', reason: '情绪强度较高，存在升级可能' },
+        refund ? { text: '退款 / 退钱 / 赔偿', reason: '出现明确经济补偿类诉求' } : { text: '要求主管或人工介入', reason: '用户希望升级处理层级' },
+        highRisk ? { text: '公开投诉 / 12315 / 小红书 / 微博', reason: '出现公开化或监管投诉倾向' } : { text: '售后未处理', reason: '问题仍未闭环' },
+      ],
+      recommendedActions: ['主管优先介入，先安抚情绪并确认责任边界', '启动退款/补偿审核，给出明确处理时限', '创建高优先级工单并触发 SLA 跟进'],
+      confidence: 90,
+    })
+  }
+
+  if (mixed) {
+    return createResult({
+      analysisType: 'general',
+      riskLevel: 'low',
+      summary: '文本包含正向认可和局部负面体验，整体属于混合反馈，建议记录优点并跟进具体问题。',
+      tags: {
+        focusObjects: focusObjects.length ? focusObjects : ['产品本身', '使用体验'],
+        emotionStates: ['平静', '轻微不满'],
+        evaluationTendencies: ['混合反馈'],
+        issueTypes: [normalNegative ? '使用体验' : '无明显问题'],
+        userDemands: [question ? '咨询信息' : '表达评价', '提出建议'],
+        riskSignals: ['低风险关注', '负面体验'],
+        suggestedActions: ['记录反馈', '归入产品反馈池', '普通跟进'],
+      },
+      evidence: [
+        { text: '好用 / 满意 / 推荐', reason: '存在正向评价倾向' },
+        { text: '但是 / 不过 / 问题体验', reason: '同时存在待优化反馈' },
+      ],
+      recommendedActions: ['回复用户并感谢反馈', '将负面细节归入产品反馈池', '普通跟进具体问题是否需要售后处理'],
+      confidence: 78,
+    })
+  }
+
+  if (positive) {
+    return createResult({
+      analysisType: 'positive',
+      riskLevel: 'none',
+      summary: '文本以正向体验和推荐意愿为主，适合沉淀为正向案例或用户口碑素材。',
+      tags: {
+        focusObjects: focusObjects.length ? focusObjects : ['产品本身', '使用体验'],
+        emotionStates: ['满意'],
+        evaluationTendencies: ['正向反馈', includesAny(text, ['超出预期']) ? '超出预期' : '愿意推荐'],
+        issueTypes: ['无明显问题'],
+        userDemands: ['表达评价'],
+        riskSignals: ['无明显风险'],
+        suggestedActions: ['沉淀正向案例', '记录反馈'],
+      },
+      evidence: [{ text: '满意 / 好用 / 推荐 / 超出预期', reason: '正向情绪和推荐倾向明显' }],
+      recommendedActions: ['记录用户正向反馈', '可沉淀为正向案例，用于产品口碑或客服复盘'],
+      confidence: 84,
+    })
+  }
+
+  if (normalNegative || refund) {
+    return createResult({
+      analysisType: 'negative',
+      riskLevel: refund ? 'medium' : 'low',
+      summary: '文本反映了明确负面体验或售后诉求，但暂未出现公开投诉、监管投诉等高风险信号。',
+      tags: {
+        focusObjects: focusObjects.length ? focusObjects : ['产品质量', '售后处理'],
+        emotionStates: [strongNegative ? '不满' : '轻微不满'],
+        evaluationTendencies: ['负向反馈', refund ? '低于预期' : '品牌信任下降'],
+        issueTypes: [
+          includesAny(text, ['破损', '包装']) ? '包装破损' : '',
+          includesAny(text, ['延迟', '慢']) ? '物流延迟' : '',
+          includesAny(text, ['故障', '坏']) ? '功能故障' : '',
+          includesAny(text, ['噪音']) ? '噪音偏大' : '',
+          includesAny(text, ['效果']) ? '效果不佳' : '',
+          includesAny(text, ['客服', '服务']) ? '服务态度差' : '',
+          refund ? '售后未处理' : '使用体验',
+        ].filter(Boolean),
+        userDemands: [refund ? '要求退款' : '寻求帮助'],
+        riskSignals: [refund ? '轻微不满' : '负面体验', refund ? '低风险关注' : '无明显风险'],
+        suggestedActions: [refund ? '售后跟进' : '普通跟进', refund ? '人工客服介入' : '记录反馈'],
+      },
+      evidence: [
+        { text: '破损 / 故障 / 不满意 / 不好用', reason: '识别到负向体验描述' },
+        refund ? { text: '退款 / 换货 / 维修', reason: '出现售后处理诉求' } : { text: '未出现公开投诉', reason: '暂无明显升级风险信号' },
+      ],
+      recommendedActions: refund ? ['创建跟进任务，由售后确认问题和处理方案', '必要时转人工客服补充安抚'] : ['记录负面反馈并普通跟进', '将问题归类后同步给对应业务团队'],
+      confidence: refund ? 82 : 74,
+    })
+  }
+
+  return createResult({
+    analysisType: 'general',
+    riskLevel: 'none',
+    summary: '文本更接近咨询或中性表达，当前未发现明显负面体验或升级风险。',
+    tags: {
+      focusObjects: focusObjects.length ? focusObjects : ['无明确对象'],
+      emotionStates: [question ? '疑惑' : '平静'],
+      evaluationTendencies: ['中性反馈'],
+      issueTypes: ['无明显问题'],
+      userDemands: [question ? '咨询信息' : '无明确诉求'],
+      riskSignals: ['无明显风险'],
+      suggestedActions: [question ? '回复用户咨询' : '记录反馈'],
+    },
+    evidence: [{ text: question ? '咨询 / 如何 / 吗' : '中性描述', reason: '未识别到明显投诉、退款或公开化表达' }],
+    recommendedActions: [question ? '回复用户咨询，并提供清晰规则或处理路径' : '记录反馈，无需升级处理'],
+    confidence: question ? 76 : 64,
+  })
+}
+
+const analysisTypeLabels: Record<AnalysisType, string> = {
+  positive: '正向反馈 · Positive',
+  general: '一般反馈 · General',
+  negative: '负向反馈 · Negative',
+  risk: '风险反馈 · Risk',
+  unclear: '无法判断 · Unclear',
+}
+
+const riskLevelLabels: Record<RiskLevel, string> = {
+  none: '无风险 · None',
+  low: '低风险 · Low',
+  medium: '中风险 · Medium',
+  high: '高风险 · High',
 }
 
 function SparkIcon() {
@@ -434,10 +598,11 @@ function Logic() {
 function Demo() {
   const [currentTpl, setCurrentTpl] = useState<TemplateKey>('chat')
   const [text, setText] = useState(templates.chat)
-  const [result, setResult] = useState<ResultData>(results.chat)
+  const [result, setResult] = useState<AnalysisResult>(() => analyzeText(templates.chat))
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [ticketCreated, setTicketCreated] = useState(false)
   const resultRef = useRef<HTMLDivElement>(null)
+  const actionButtonLabel = getActionButtonLabel(result)
 
   function selectTemplate(key: TemplateKey) {
     setCurrentTpl(key)
@@ -445,10 +610,9 @@ function Demo() {
   }
 
   function analyze() {
-    const key = text.trim() ? (currentTpl === 'blank' ? 'chat' : currentTpl) : 'blank'
     setIsAnalyzing(true)
     window.setTimeout(() => {
-      setResult(results[key])
+      setResult(analyzeText(text))
       setTicketCreated(false)
       setIsAnalyzing(false)
       resultRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
@@ -494,34 +658,41 @@ function Demo() {
             <div className="result-head">
               <div className="left">
                 <span className="ai-mark"><SparkIcon /></span>
-                <span className="title">AI 分析结果 · Escalation Risk Report</span>
+                <span className="title">AI 分析结果 · Feedback Insight</span>
               </div>
-              <span className={`risk-badge ${result.risk.cls}`}><span className="dot"></span>{result.risk.label}</span>
+              <div className="result-badges">
+                <span className={`risk-badge ${result.riskLevel}`}><span className="dot"></span>{riskLevelLabels[result.riskLevel]}</span>
+                <span className={`type-badge ${result.analysisType}`}>{analysisTypeLabels[result.analysisType]}</span>
+              </div>
             </div>
             <div className="result-body">
               <div className="result-col">
-                <ResultBlock label="情绪识别 · Sentiment" value={result.sentiment} />
-                <ResultBlock label="问题类型 · Issue Type" value={result.issue} />
-                <ResultBlock label="客户诉求 · Demand" value={result.demand} />
                 <div className="r-block">
-                  <div className="k">风险信号 · Signals</div>
-                  <ul>{result.signals.map((signal) => <li key={signal}>{signal}</li>)}</ul>
+                  <div className="k">摘要 · Summary</div>
+                  <div className="v result-summary">{result.summary}</div>
                 </div>
-              </div>
-              <div className="result-col">
                 <div className="r-block">
-                  <div className="k">判断依据 · Explanation</div>
-                  <div className="v">{result.explain}</div>
+                  <div className="k">标签维度 · Tags</div>
+                  <TagGroups result={result} />
+                </div>
+                <div className="r-block">
+                  <div className="k">置信度 · Confidence</div>
                   <div className="confidence">
                     <span>Confidence</span>
                     <div className="confidence-bar"><span style={{ width: `${result.confidence}%` }}></span></div>
                     <span>{result.confidence}%</span>
                   </div>
                 </div>
+              </div>
+              <div className="result-col">
+                <div className="r-block">
+                  <div className="k">判断依据 · Evidence</div>
+                  <EvidenceList evidence={result.evidence} />
+                </div>
                 <div className="r-block">
                   <div className="k">建议动作 · Recommended Actions</div>
                   <div className="action-list">
-                    {result.actions.map((action, index) => <div className="action-item" key={action}><span className="num">{index + 1}</span><span>{action}</span></div>)}
+                    {result.recommendedActions.map((action, index) => <div className="action-item" key={action}><span className="num">{index + 1}</span><span>{action}</span></div>)}
                   </div>
                 </div>
               </div>
@@ -531,9 +702,11 @@ function Demo() {
                 <span className="meta">分析耗时 1.2s · 模型版本 v0.4</span>
                 <span className="footer-note">仅 Demo 演示，不会保存数据</span>
               </div>
-              <button className={`btn-ticket${ticketCreated ? ' success' : ''}`} onClick={() => setTicketCreated(true)}>
-                {ticketCreated ? '✓ 工单已创建 · Ticket #ESC-2026-0481' : '创建高优先级工单'}
-              </button>
+              {actionButtonLabel ? (
+                <button className={`btn-ticket${ticketCreated ? ' success' : ''}`} onClick={() => setTicketCreated(true)}>
+                  {ticketCreated ? `✓ 已处理 · ${actionButtonLabel}` : actionButtonLabel}
+                </button>
+              ) : null}
             </div>
           </div>
         </div>
@@ -542,13 +715,50 @@ function Demo() {
   )
 }
 
-function ResultBlock({ label, value }: { label: string; value: string }) {
+function TagGroups({ result }: { result: AnalysisResult }) {
+  const groups = [
+    ['关注对象', result.tags.focusObjects],
+    ['情绪状态', result.tags.emotionStates],
+    ['评价倾向', result.tags.evaluationTendencies],
+    ['问题类型', result.tags.issueTypes],
+    ['用户诉求', result.tags.userDemands],
+    ['风险信号', result.tags.riskSignals],
+    ['建议动作', result.tags.suggestedActions],
+  ] as const
+
   return (
-    <div className="r-block">
-      <div className="k">{label}</div>
-      <div className="v">{value}</div>
+    <div className="tag-groups">
+      {groups.map(([label, tags]) => (
+        <div className="tag-group" key={label}>
+          <div className="tag-group-label">{label}</div>
+          <div className="tag-group-values">
+            {tags.map((tag) => <span className="insight-tag" key={tag}>{tag}</span>)}
+          </div>
+        </div>
+      ))}
     </div>
   )
+}
+
+function EvidenceList({ evidence }: { evidence: EvidenceItem[] }) {
+  return (
+    <div className="evidence-list">
+      {evidence.map((item) => (
+        <div className="evidence-item" key={`${item.text}-${item.reason}`}>
+          <div className="evidence-hit">{item.text}</div>
+          <div className="evidence-reason">{item.reason}</div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function getActionButtonLabel(result: AnalysisResult) {
+  if (result.analysisType === 'unclear') return ''
+  if (result.analysisType === 'positive') return '沉淀为正向案例'
+  if (result.riskLevel === 'high') return '创建高优先级工单'
+  if (result.riskLevel === 'medium' || result.riskLevel === 'low') return '创建跟进任务'
+  return '记录反馈'
 }
 
 function Footer() {
