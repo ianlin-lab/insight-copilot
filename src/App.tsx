@@ -61,7 +61,7 @@ function Header() {
     <header className="nav">
       <div className="container nav-inner">
         <div className="brand">
-          <span className="brand-mark"></span>
+          <img className="brand-mark" src="/favicon.png" alt="" />
           <span>
             Escalation&nbsp;<em>/</em>&nbsp;升级风险识别
           </span>
