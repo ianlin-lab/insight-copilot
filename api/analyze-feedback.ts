@@ -1,5 +1,5 @@
-import { tagTaxonomy } from '../src/data/tagTaxonomy'
-import type { AnalysisResult } from '../src/types/analysis'
+import { tagTaxonomy } from '../src/data/tagTaxonomy.js'
+import type { AnalysisResult } from '../src/types/analysis.js'
 
 type VercelRequest = {
   method?: string
