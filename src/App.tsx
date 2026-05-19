@@ -72,7 +72,7 @@ function Header() {
           <a href="#logic">产品逻辑</a>
           <a href="#demo">体验 Demo</a>
         </nav>
-        <a href="#" className="nav-cta">
+        <a href="https://possible-polygon-620180.framer.app/" className="nav-cta">
           &nbsp;返回作品集&nbsp;
         </a>
       </div>
@@ -551,7 +551,7 @@ function Footer() {
     <footer>
       <div className="container footer-inner">
         <div>AI 客户升级风险识别 · Case Study</div>
-        <div className="credit">DESIGN PROTOTYPE · 2026 · NEXT.JS + TAILWIND READY</div>
+        <div className="credit">© 2026 iAN · Product Manager / AI Product Demo<br />Email: linxiayang65@gmail.com · Portfolio · GitHub</div>
       </div>
     </footer>
   )
