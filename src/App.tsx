@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { analyzeFeedback } from './services/feedbackAnalyzer'
 import type { AnalysisResult, AnalysisType, EvidenceItem, RiskLevel } from './types/analysis'
 import './App.css'
@@ -422,9 +423,13 @@ function Demo() {
   const [result, setResult] = useState<AnalysisResult | null>(null)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [ticketCreated, setTicketCreated] = useState(false)
+  const [isTicketPreviewOpen, setIsTicketPreviewOpen] = useState(false)
+  const [ticketToastVisible, setTicketToastVisible] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const resultRef = useRef<HTMLDivElement>(null)
+  const toastTimerRef = useRef<number | null>(null)
   const actionButtonLabel = result ? getActionButtonLabel(result) : ''
+  const sourceLabel = getTemplateSourceLabel(currentTpl)
 
   useEffect(() => {
     let isMounted = true
@@ -438,8 +443,27 @@ function Demo() {
 
     return () => {
       isMounted = false
+      if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current)
     }
   }, [])
+
+  useEffect(() => {
+    if (!isTicketPreviewOpen) return
+
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === 'Escape') setIsTicketPreviewOpen(false)
+    }
+
+    window.addEventListener('keydown', closeOnEscape)
+
+    return () => {
+      document.body.style.overflow = previousOverflow
+      window.removeEventListener('keydown', closeOnEscape)
+    }
+  }, [isTicketPreviewOpen])
 
   function selectTemplate(key: TemplateKey) {
     setCurrentTpl(key)
@@ -461,6 +485,25 @@ function Demo() {
   function clearComposer() {
     setText('')
     textareaRef.current?.focus()
+  }
+
+  function handleFooterAction() {
+    if (result?.riskLevel === 'high') {
+      setIsTicketPreviewOpen(true)
+      return
+    }
+
+    setTicketCreated(true)
+  }
+
+  function simulateCreateTicket() {
+    setIsTicketPreviewOpen(false)
+    setTicketToastVisible(true)
+
+    if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current)
+    toastTimerRef.current = window.setTimeout(() => {
+      setTicketToastVisible(false)
+    }, 3200)
   }
 
   return (
@@ -485,6 +528,10 @@ function Demo() {
             ))}
           </div>
           <div className="composer">
+            <button type="button" className="composer-clear-action" onClick={clearComposer} disabled={!text}>
+              <span aria-hidden="true">×</span>
+              清空内容
+            </button>
             <textarea
               ref={textareaRef}
               maxLength={MAX_LENGTH}
@@ -493,10 +540,7 @@ function Demo() {
               onChange={(event) => setText(event.target.value.slice(0, MAX_LENGTH))}
             />
             <div className="composer-footer">
-              <div className="composer-footer-left">
-                <span className="composer-meta">{text.length} / {MAX_LENGTH} 字符</span>
-                <button type="button" className="composer-clear-link" onClick={clearComposer}>清空，输入你的内容</button>
-              </div>
+              <span className="composer-meta">{text.length} / {MAX_LENGTH} 字符</span>
               <button className="btn-analyze" disabled={isAnalyzing} onClick={analyze}>{isAnalyzing ? '分析中…' : '开始分析'}</button>
             </div>
           </div>
@@ -508,7 +552,7 @@ function Demo() {
                 <span className="title">AI 分析结果 · Feedback Insight</span>
               </div>
               <div className="result-badges">
-                <span className="confidence-inline">Confidence <strong>{result.confidence}%</strong></span>
+                <span className="confidence-inline">置信度 <strong>{result.confidence}%</strong></span>
                 <span className={`risk-badge ${result.riskLevel}`}><span className="dot"></span>{riskLevelLabels[result.riskLevel]}</span>
                 <span className={`type-badge ${result.analysisType}`}>{analysisTypeLabels[result.analysisType]}</span>
               </div>
@@ -543,12 +587,45 @@ function Demo() {
                 <span className="footer-note">仅 Demo 演示，不会保存数据</span>
               </div>
               {actionButtonLabel ? (
-                <button className={`btn-ticket${ticketCreated ? ' success' : ''}`} onClick={() => setTicketCreated(true)}>
+                <button className={`btn-ticket${ticketCreated ? ' success' : ''}`} onClick={handleFooterAction}>
                   {ticketCreated ? `✓ 已处理 · ${actionButtonLabel}` : actionButtonLabel}
                 </button>
               ) : null}
             </div>
           </div> : null}
+          {isTicketPreviewOpen ? createPortal(
+            <div className="ticket-modal-backdrop" role="presentation" onClick={() => setIsTicketPreviewOpen(false)}>
+              <div className="ticket-modal" role="dialog" aria-modal="true" aria-labelledby="ticket-modal-title" onClick={(event) => event.stopPropagation()}>
+                <div className="ticket-modal-head">
+                  <div>
+                    <div className="ticket-modal-kicker">即将生成的工单</div>
+                    <h3 id="ticket-modal-title">创建高优先级工单</h3>
+                    <p>AI 已根据当前分析结果生成工单草稿，可用于人工确认后提交。</p>
+                  </div>
+                  <button type="button" className="ticket-modal-close" aria-label="关闭工单预览" onClick={() => setIsTicketPreviewOpen(false)}>×</button>
+                </div>
+                <div className="ticket-preview-card">
+                  <div className="ticket-field"><span>工单标题</span><strong>高风险客户反馈待处理</strong></div>
+                  <div className="ticket-field"><span>优先级</span><strong className="ticket-priority">P1 / 高</strong></div>
+                  <div className="ticket-field"><span>来源</span><strong>{sourceLabel}</strong></div>
+                  <div className="ticket-field"><span>风险类型</span><strong>公开投诉、退款诉求、重复反馈</strong></div>
+                  <div className="ticket-field ticket-field-wide"><span>工单摘要</span><strong>客户多次反馈售后问题未解决，已出现退款诉求和公开投诉倾向，需要优先跟进。</strong></div>
+                  <div className="ticket-field"><span>建议处理人</span><strong>客服主管 / 售后负责人</strong></div>
+                  <div className="ticket-field"><span>SLA</span><strong>24 小时内跟进</strong></div>
+                  <div className="ticket-field ticket-field-wide"><span>备注</span><strong>Demo 演示，不会真实创建工单</strong></div>
+                </div>
+                <div className="ticket-modal-actions">
+                  <button type="button" className="ticket-btn ticket-btn-ghost" onClick={() => setIsTicketPreviewOpen(false)}>取消</button>
+                  <button type="button" className="ticket-btn ticket-btn-primary" onClick={simulateCreateTicket}>模拟创建</button>
+                </div>
+              </div>
+            </div>,
+            document.body,
+          ) : null}
+          {ticketToastVisible ? createPortal(
+            <div className="ticket-toast" role="status">已生成模拟工单：TK-2025-001，仅用于 Demo 展示</div>,
+            document.body,
+          ) : null}
         </div>
       </div>
     </section>
@@ -596,9 +673,15 @@ function EvidenceList({ evidence }: { evidence: EvidenceItem[] }) {
 function getActionButtonLabel(result: AnalysisResult) {
   if (result.analysisType === 'unclear') return ''
   if (result.analysisType === 'positive') return '沉淀为正向案例'
-  if (result.riskLevel === 'high') return '创建高优先级工单'
+  if (result.riskLevel === 'high') return '生成工单草稿'
   if (result.riskLevel === 'medium' || result.riskLevel === 'low') return '创建跟进任务'
   return '记录反馈'
+}
+
+function getTemplateSourceLabel(template: TemplateKey) {
+  if (template === 'chat') return '在线客服会话'
+  if (template === 'call') return '电话转写'
+  return '电商社媒评论'
 }
 
 function Footer() {
