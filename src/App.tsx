@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react'
 import { analyzeFeedback } from './services/feedbackAnalyzer'
 import type { AnalysisResult, AnalysisType, EvidenceItem, RiskLevel } from './types/analysis'
 import './App.css'
@@ -55,7 +55,63 @@ function PhoneIcon() {
   )
 }
 
+function UserRoundIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="12" cy="8" r="4" />
+      <path d="M20 21a8 8 0 0 0-16 0" />
+    </svg>
+  )
+}
+
+function HeadsetIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M4 12a8 8 0 0 1 16 0" />
+      <path d="M4 12v4a2 2 0 0 0 2 2h1v-6H6a2 2 0 0 0-2 2" />
+      <path d="M20 12v4a2 2 0 0 1-2 2h-1v-6h1a2 2 0 0 1 2 2" />
+      <path d="M17 18a5 5 0 0 1-5 3" />
+    </svg>
+  )
+}
+
+function StoreIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M4 10h16" />
+      <path d="M5 10l1.2-5h11.6L19 10" />
+      <path d="M6 10v9h12v-9" />
+      <path d="M9 19v-5h6v5" />
+    </svg>
+  )
+}
+
 function Header() {
+  const navItems = [
+    ['hero', '概述'],
+    ['usecases', '应用场景'],
+    ['logic', '产品逻辑'],
+    ['demo', '体验 Demo'],
+  ] as const
+
+  function scrollToSection(event: MouseEvent<HTMLAnchorElement>, sectionId: string) {
+    event.preventDefault()
+
+    const section = document.getElementById(sectionId)
+    if (!section) return
+
+    const target = sectionId === 'hero'
+      ? section
+      : section.querySelector<HTMLElement>('.section-head') ?? section
+    const anchorOffset = Number.parseFloat(
+      getComputedStyle(document.documentElement).getPropertyValue('--anchor-offset'),
+    ) || 96
+    const top = target.getBoundingClientRect().top + window.scrollY - anchorOffset
+
+    window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' })
+    window.history.pushState(null, '', `#${sectionId}`)
+  }
+
   return (
     <header className="nav">
       <div className="container nav-inner">
@@ -66,10 +122,11 @@ function Header() {
           </span>
         </div>
         <nav className="nav-links">
-          <a href="#hero">概述</a>
-          <a href="#usecases">应用场景</a>
-          <a href="#logic">产品逻辑</a>
-          <a href="#demo">体验 Demo</a>
+          {navItems.map(([sectionId, label]) => (
+            <a href={`#${sectionId}`} key={sectionId} onClick={(event) => scrollToSection(event, sectionId)}>
+              {label}
+            </a>
+          ))}
         </nav>
         <a href="https://possible-polygon-620180.framer.app/" className="nav-cta">
           &nbsp;返回作品集&nbsp;
@@ -103,7 +160,7 @@ function Hero() {
             <p className="hero-sub">AI 客户升级风险识别 Demo</p>
             <p className="hero-en">AI Escalation Risk Detector for Customer Conversations</p>
             <p className="hero-desc">
-              输入一段客服会话、电话转写或电商评论，AI 会识别其中的情绪升级、重复投诉、退款诉求、公开投诉风险，并给出可解释的判断依据和处理建议。
+              输入客服会话、电话转写或电商评论，AI 会识别其中的情绪升级、重复投诉、退款诉求、公开投诉风险，并给出可解释的判断依据和处理建议。
             </p>
             <div className="cta-row">
               <a href="#demo" className="btn btn-primary">体验 Demo</a>
@@ -121,21 +178,20 @@ function Hero() {
             </div>
             <div className="hero-chat">
               <div className="hero-bubble">
-                <div className="hero-avatar">客</div>
+                <div className="hero-avatar"><UserRoundIcon /></div>
                 <div className="hero-msg">这个问题<span className="hl-strong">我已经反馈第三次了</span>，怎么还是没人处理？</div>
               </div>
               <div className="hero-bubble">
-                <div className="hero-avatar">客</div>
+                <div className="hero-avatar"><UserRoundIcon /></div>
                 <div className="hero-msg">如果今天再不解决，<span className="hl-strong">我要求全额退款</span>，否则<span className="hl-strong">我会去平台公开投诉</span>。</div>
               </div>
               <div className="hero-bubble">
-                <div className="hero-avatar">客</div>
+                <div className="hero-avatar"><UserRoundIcon /></div>
                 <div className="hero-msg"><span className="hl-strong">真的非常失望</span>，你们服务态度太敷衍了。</div>
               </div>
             </div>
             <div className="hero-ai">
               <div className="hero-ai-head">
-                <span className="ai-mark"><SparkIcon /></span>
                 <span className="hero-ai-label">AI 识别结果</span>
               </div>
               <div className="ai-tags">
@@ -221,15 +277,15 @@ function ChatUseCase() {
   const input = (
     <div className="uc-input chat-pane">
       <div className="chat-pane-head">
-        <span className="chat-store">官方旗舰店 · 售后客服</span>
+        <span className="chat-store"><StoreIcon />官方旗舰店 · 售后客服</span>
         <span className="chat-meta">订单 #A2041 · 12:48</span>
       </div>
       <div className="chat">
-        <div className="bubble from-customer"><div className="avatar cust">客</div><div className="msg">您好，我上周买的吹风机用了三次就坏了，已经申请过售后了。</div></div>
-        <div className="bubble from-agent"><div className="avatar agent">服</div><div className="msg">您好，麻烦提供一下订单号，我帮您查一下。</div></div>
-        <div className="bubble from-customer"><div className="avatar cust">客</div><div className="msg">订单号 <span className="mono-inline">A2041</span>，<span className="hl-strong">这已经是我第三次反馈了</span>，每次都让我重新提交。</div></div>
-        <div className="bubble from-agent"><div className="avatar agent">服</div><div className="msg">抱歉给您带来困扰，我这边再帮您加急一下。</div></div>
-        <div className="bubble from-customer"><div className="avatar cust">客</div><div className="msg">不用加急了，<span className="hl-strong">我要求今天全额退款</span>，否则我会去<span className="hl-strong">黑猫和小红书公开投诉</span>。</div></div>
+        <div className="bubble from-customer"><div className="avatar cust"><UserRoundIcon /></div><div className="msg">您好，我上周买的吹风机用了三次就坏了，已经申请过售后了。</div></div>
+        <div className="bubble from-agent"><div className="avatar agent"><HeadsetIcon /></div><div className="msg">您好，麻烦提供一下订单号，我帮您查一下。</div></div>
+        <div className="bubble from-customer"><div className="avatar cust"><UserRoundIcon /></div><div className="msg">订单号 <span className="mono-inline">A2041</span>，<span className="hl-strong">这已经是我第三次反馈了</span>，每次都让我重新提交。</div></div>
+        <div className="bubble from-agent"><div className="avatar agent"><HeadsetIcon /></div><div className="msg">抱歉给您带来困扰，我这边再帮您加急一下。</div></div>
+        <div className="bubble from-customer"><div className="avatar cust"><UserRoundIcon /></div><div className="msg">不用加急了，<span className="hl-strong">我要求今天全额退款</span>，否则我会去<span className="hl-strong">黑猫和小红书公开投诉</span>。</div></div>
       </div>
     </div>
   )
@@ -260,10 +316,10 @@ function CallUseCase() {
       </div>
       <div className="call-transcript">
         <div className="call-tr-head">ASR 转写文本</div>
-        <div className="call-line"><span className="ts">00:32</span><span className="who">客户</span><span className="line"><span className="hl-strong">这已经是我第四次打电话了</span>，每次都说会有人联系我，<span className="hl-strong">没人联系我</span>。</span></div>
-        <div className="call-line"><span className="ts">01:05</span><span className="who">客服</span><span className="line">非常抱歉给您带来困扰，我先帮您记录一下情况……</span></div>
-        <div className="call-line"><span className="ts">01:18</span><span className="who">客户</span><span className="line"><span className="hl-strong">我不想再听抱歉了</span>，给我<span className="hl-strong">找你们经理</span>，要不就退钱。</span></div>
-        <div className="call-line"><span className="ts">01:46</span><span className="who">客户</span><span className="line">再处理不了我就去消协了，你们这种态度太离谱。</span></div>
+        <div className="call-line"><span className="ts">00:32</span><span className="who who-customer" aria-label="客户"><UserRoundIcon /></span><span className="line"><span className="hl-strong">这已经是我第四次打电话了</span>，每次都说会有人联系我，<span className="hl-strong">没人联系我</span>。</span></div>
+        <div className="call-line"><span className="ts">01:05</span><span className="who who-agent" aria-label="客服"><HeadsetIcon /></span><span className="line">非常抱歉给您带来困扰，我先帮您记录一下情况……</span></div>
+        <div className="call-line"><span className="ts">01:18</span><span className="who who-customer" aria-label="客户"><UserRoundIcon /></span><span className="line"><span className="hl-strong">我不想再听抱歉了</span>，给我<span className="hl-strong">找你们经理</span>，要不就退钱。</span></div>
+        <div className="call-line"><span className="ts">01:46</span><span className="who who-customer" aria-label="客户"><UserRoundIcon /></span><span className="line">再处理不了我就去消协了，你们这种态度太离谱。</span></div>
       </div>
     </div>
   )
@@ -366,6 +422,7 @@ function Demo() {
   const [result, setResult] = useState<AnalysisResult | null>(null)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [ticketCreated, setTicketCreated] = useState(false)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
   const resultRef = useRef<HTMLDivElement>(null)
   const actionButtonLabel = result ? getActionButtonLabel(result) : ''
 
@@ -401,6 +458,11 @@ function Demo() {
     }
   }
 
+  function clearComposer() {
+    setText('')
+    textareaRef.current?.focus()
+  }
+
   return (
     <section id="demo" className="demo reveal-section">
       <div className="container">
@@ -424,13 +486,17 @@ function Demo() {
           </div>
           <div className="composer">
             <textarea
+              ref={textareaRef}
               maxLength={MAX_LENGTH}
               value={text}
               placeholder="选择上方模板快速填充示例，或粘贴一段客服会话、电话转写、评论文本，测试 AI 如何识别升级风险。"
               onChange={(event) => setText(event.target.value.slice(0, MAX_LENGTH))}
             />
             <div className="composer-footer">
-              <span className="composer-meta">{text.length} / {MAX_LENGTH} 字符</span>
+              <div className="composer-footer-left">
+                <span className="composer-meta">{text.length} / {MAX_LENGTH} 字符</span>
+                <button type="button" className="composer-clear-link" onClick={clearComposer}>清空，输入你的内容</button>
+              </div>
               <button className="btn-analyze" disabled={isAnalyzing} onClick={analyze}>{isAnalyzing ? '分析中…' : '开始分析'}</button>
             </div>
           </div>
@@ -442,6 +508,7 @@ function Demo() {
                 <span className="title">AI 分析结果 · Feedback Insight</span>
               </div>
               <div className="result-badges">
+                <span className="confidence-inline">Confidence <strong>{result.confidence}%</strong></span>
                 <span className={`risk-badge ${result.riskLevel}`}><span className="dot"></span>{riskLevelLabels[result.riskLevel]}</span>
                 <span className={`type-badge ${result.analysisType}`}>{analysisTypeLabels[result.analysisType]}</span>
               </div>
@@ -455,14 +522,6 @@ function Demo() {
                 <div className="r-block">
                   <div className="k">标签维度 · Tags</div>
                   <TagGroups result={result} />
-                </div>
-                <div className="r-block">
-                  <div className="k">置信度 · Confidence</div>
-                  <div className="confidence">
-                    <span>Confidence</span>
-                    <div className="confidence-bar"><span style={{ width: `${result.confidence}%` }}></span></div>
-                    <span>{result.confidence}%</span>
-                  </div>
                 </div>
               </div>
               <div className="result-col">
