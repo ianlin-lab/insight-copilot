@@ -17,7 +17,6 @@ const templates = {
 [01:46] 客户：再处理不了我就去消协了，你们这种态度太离谱。`,
   review: `淘宝评价 ★ 1.0  包装严重破损，里面的产品也磕碰了。质量差，客服一直踢皮球，让我去找快递，快递让我找商家，已经准备 12315 投诉了，提醒大家别买。
 微博 @品牌官方  这种售后真的让人寒心，建议大家慎重购买。同样的问题反馈了三次还是没人处理。`,
-  blank: '',
 }
 
 type TemplateKey = keyof typeof templates
@@ -91,7 +90,7 @@ function Tag({ children, high, color }: { children: string; high?: boolean; colo
 
 function Hero() {
   return (
-    <section id="hero" className="hero">
+    <section id="hero" className="hero reveal-section">
       <div className="container">
         <div className="hero-grid">
           <div className="hero-copy">
@@ -159,7 +158,7 @@ function Hero() {
 
 function UseCases() {
   return (
-    <section id="usecases" className="usecases">
+    <section id="usecases" className="usecases reveal-section">
       <div className="container">
         <div className="section-head">
           <span className="eyebrow">02 · Use Cases</span>
@@ -313,48 +312,46 @@ function ReviewUseCase() {
 }
 
 function Logic() {
-  const steps = [
-    ['客户反馈输入', '在线会话 · 电话转写 · 评论舆情'],
-    ['AI 语义识别', '情绪 · 意图 · 实体 · 诉求'],
-    ['风险信号判断', '升级 · 重复 · 公开投诉倾向'],
-    ['标签 + 解释', '结构化标签 + 判断依据'],
-    ['预警 / 工单建议', '进入客服处理闭环'],
-  ]
   const principles = [
-    ['PRINCIPLE 01', 'Detect', '识别', '从对话和文本中识别情绪走向、问题类型、客户真实诉求和升级信号，不依赖关键词命中。'],
-    ['PRINCIPLE 02', 'Explain', '解释', '每条结果都附带触发依据和置信度，客服与主管能看懂"为什么这条是高风险"。'],
-    ['PRINCIPLE 03', 'Act', '建议动作', '识别不是终点：直接输出可执行的下一步——转主管、退款审核、品牌公关或工单。'],
+    ['Detect.', '不只判断情绪', '从对话和文本中识别情绪走向、问题类型、客户真实诉求和升级信号，不依赖关键词命中。'],
+    ['Explain.', '不只输出标签', '每条结果都附带触发依据和置信度，客服与主管能看懂"为什么这条是高风险"。'],
+    ['Act.', '不只做分析', '识别不是终点：直接输出可执行的下一步——转主管、退款审核、品牌公关或工单。'],
+  ]
+  const pipeline = [
+    ['01', '客户反馈输入', 'INPUT'],
+    ['02', 'AI 语义识别', 'DETECT'],
+    ['03', '风险信号判断', 'SCORE'],
+    ['04', '标签与解释输出', 'EXPLAIN'],
+    ['05', '预警与工单建议', 'ACT'],
   ]
 
   return (
-    <section id="logic" className="logic">
+    <section id="logic" className="logic reveal-section">
       <div className="container">
         <div className="section-head">
           <span className="eyebrow">03 · Product Logic</span>
           <h2>从一句客户反馈，<br />到一个可执行的工单</h2>
           <p>五个步骤，一条可解释的链路。识别不是终点，输出可执行的下一步才是。</p>
         </div>
-        <div className="flow-line">
-          <div className="flow-rail" aria-hidden="true"></div>
-          {steps.map(([title, copy], index) => (
-            <div className="flow-step" key={title}>
-              <div className={`flow-dot${index === steps.length - 1 ? ' last' : ''}`}><span>{index + 1}</span></div>
-              <div className="flow-card">
-                <div className="flow-icon"><SparkIcon /></div>
-                <h4>{title}</h4>
+        <div className="logic-principles">
+          {principles.map(([keyword, title, copy]) => (
+            <div className="logic-principle-row" key={keyword}>
+              <div className="logic-keyword">{keyword}</div>
+              <div className="logic-copy">
+                <h3>{title}</h3>
                 <p>{copy}</p>
               </div>
             </div>
           ))}
         </div>
-        <div className="flow-divider"><span>设计原则</span></div>
-        <div className="principles">
-          {principles.map(([num, title, en, copy]) => (
-            <div className="principle" key={num}>
-              <div className="num">{num}</div>
-              <h3>{title}</h3>
-              <div className="en">{en}</div>
-              <p>{copy}</p>
+
+        <div className="pipeline-head">分析链路 · Pipeline</div>
+        <div className="pipeline-list">
+          {pipeline.map(([num, title, role]) => (
+            <div className="pipeline-row" key={num}>
+              <span className="pipeline-num">{num}</span>
+              <span className="pipeline-title">{title}</span>
+              <span className="pipeline-role">{role}</span>
             </div>
           ))}
         </div>
@@ -405,7 +402,7 @@ function Demo() {
   }
 
   return (
-    <section id="demo" className="demo">
+    <section id="demo" className="demo reveal-section">
       <div className="container">
         <div className="section-head">
           <span className="eyebrow">04 · Try it</span>
@@ -419,9 +416,8 @@ function Demo() {
               ['chat', '在线客服会话'],
               ['call', '电话转写'],
               ['review', '电商 / 社媒评论'],
-              ['blank', '空白：自定义输入'],
             ].map(([key, label]) => (
-              <button key={key} className={`tpl-btn${currentTpl === key ? ' active' : ''}`} onClick={() => selectTemplate(key as TemplateKey)}>
+              <button type="button" key={key} className={`tpl-btn${currentTpl === key ? ' active' : ''}`} onClick={() => selectTemplate(key as TemplateKey)}>
                 {label}
               </button>
             ))}
@@ -558,6 +554,34 @@ function Footer() {
 }
 
 function App() {
+  useEffect(() => {
+    const sections = Array.from(document.querySelectorAll<HTMLElement>('.reveal-section'))
+
+    if (!sections.length) return
+
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    if (prefersReducedMotion || !('IntersectionObserver' in window)) {
+      sections.forEach((section) => section.classList.add('is-visible'))
+      return
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('is-visible')
+            observer.unobserve(entry.target)
+          }
+        })
+      },
+      { threshold: 0.12, rootMargin: '0px 0px -8% 0px' },
+    )
+
+    sections.forEach((section) => observer.observe(section))
+
+    return () => observer.disconnect()
+  }, [])
+
   return (
     <>
       <Header />
