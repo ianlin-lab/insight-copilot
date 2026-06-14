@@ -129,7 +129,7 @@ function Header() {
             </a>
           ))}
         </nav>
-        <a href="https://possible-polygon-620180.framer.app/" className="nav-cta">
+        <a href="https://ianlab.framer.ai/" className="nav-cta">
           &nbsp;返回作品集&nbsp;
         </a>
       </div>
@@ -504,16 +504,19 @@ function Demo() {
   const [ticketCreated, setTicketCreated] = useState(false)
   const [isTicketPreviewOpen, setIsTicketPreviewOpen] = useState(false)
   const [ticketToastVisible, setTicketToastVisible] = useState(false)
+  const [isTextRefreshing, setIsTextRefreshing] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const resultRef = useRef<HTMLDivElement>(null)
   const analyzeInFlightRef = useRef(false)
   const toastTimerRef = useRef<number | null>(null)
+  const textRefreshTimerRef = useRef<number | null>(null)
   const actionButtonLabel = result ? getActionButtonLabel(result) : ''
   const sourceLabel = getTemplateSourceLabel(currentTpl)
 
   useEffect(() => {
     return () => {
       if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current)
+      if (textRefreshTimerRef.current) window.clearTimeout(textRefreshTimerRef.current)
     }
   }, [])
 
@@ -538,6 +541,12 @@ function Demo() {
   function selectTemplate(key: TemplateKey) {
     setCurrentTpl(key)
     setText(templates[key])
+    setIsTextRefreshing(true)
+
+    if (textRefreshTimerRef.current) window.clearTimeout(textRefreshTimerRef.current)
+    textRefreshTimerRef.current = window.setTimeout(() => {
+      setIsTextRefreshing(false)
+    }, 220)
   }
 
   async function analyze() {
@@ -588,7 +597,7 @@ function Demo() {
           <h2>把一段真实客户文本<br />交给 AI 分析</h2>
           <p>选择一个场景模板，或直接粘贴你自己的客户对话、评论、转写文本。点击「开始分析」，看 AI 输出什么。</p>
         </div>
-        <div className="demo-shell">
+        <div className={`demo-shell${isAnalyzing ? ' is-analyzing' : ''}`}>
           <div className="template-row">
             <span className="lbl">场景模板</span>
             {[
@@ -608,6 +617,7 @@ function Demo() {
             </button>
             <textarea
               ref={textareaRef}
+              className={isTextRefreshing ? 'is-refreshing' : ''}
               maxLength={MAX_LENGTH}
               value={text}
               placeholder="选择上方模板快速填充示例，或粘贴一段客服会话、电话转写、评论文本，测试 AI 如何识别升级风险。"
@@ -615,11 +625,14 @@ function Demo() {
             />
             <div className="composer-footer">
               <span className="composer-meta">{text.length} / {MAX_LENGTH} 字符</span>
-              <button className="btn-analyze" disabled={isAnalyzing} onClick={analyze}>{isAnalyzing ? '分析中…' : '开始分析'}</button>
+              <button className="btn-analyze" disabled={isAnalyzing} onClick={analyze}>
+                {isAnalyzing ? <span className="loading-dot" aria-hidden="true"></span> : null}
+                <span>{isAnalyzing ? '分析中…' : '开始分析'}</span>
+              </button>
             </div>
           </div>
           <p className="demo-hint">适用于客服会话、电话转写、电商评论、社媒反馈等客户反馈文本。非客户反馈类内容可能无法生成有效风险判断。</p>
-          {result ? <div className="result" ref={resultRef}>
+          {isAnalyzing ? <DemoResultSkeleton /> : result ? <div className="result result-ready" ref={resultRef}>
             <div className="result-head">
               <div className="left">
                 <span className="ai-mark"><SparkIcon /></span>
@@ -633,21 +646,21 @@ function Demo() {
             </div>
             <div className="result-body">
               <div className="result-col">
-                <div className="r-block">
+                <div className="r-block result-step result-step-summary">
                   <div className="k">摘要 · Summary</div>
                   <div className="v result-summary">{result.summary}</div>
                 </div>
-                <div className="r-block">
+                <div className="r-block result-step result-step-tags">
                   <div className="k">标签维度 · Tags</div>
                   <TagGroups result={result} />
                 </div>
               </div>
               <div className="result-col">
-                <div className="r-block">
+                <div className="r-block result-step result-step-evidence">
                   <div className="k">判断依据 · Evidence</div>
                   <EvidenceList evidence={result.evidence} />
                 </div>
-                <div className="r-block">
+                <div className="r-block result-step result-step-actions">
                   <div className="k">建议动作 · Recommended Actions</div>
                   <div className="action-list">
                     {result.recommendedActions.map((action, index) => <div className="action-item" key={action}><span className="num">{index + 1}</span><span>{action}</span></div>)}
@@ -655,7 +668,7 @@ function Demo() {
                 </div>
               </div>
             </div>
-            <div className="result-footer">
+            <div className="result-footer result-step result-step-footer">
               <div className="footer-left">
                 <span className="meta">分析耗时 1.2s · 模型版本 v0.4</span>
                 <span className="footer-note">仅 Demo 演示，不会保存数据</span>
@@ -703,6 +716,51 @@ function Demo() {
         </div>
       </div>
     </section>
+  )
+}
+
+function DemoResultSkeleton() {
+  return (
+    <div className="result result-skeleton" aria-live="polite" aria-busy="true">
+      <div className="result-head">
+        <div className="left">
+          <span className="ai-mark"><SparkIcon /></span>
+          <span className="title">AI 分析结果 · Feedback Insight</span>
+        </div>
+        <div className="result-badges">
+          <span className="skeleton-line skeleton-pill"></span>
+          <span className="skeleton-line skeleton-pill"></span>
+        </div>
+      </div>
+      <div className="result-body">
+        <div className="result-col">
+          <div className="r-block">
+            <div className="skeleton-line skeleton-k"></div>
+            <div className="skeleton-box skeleton-summary"></div>
+          </div>
+          <div className="r-block">
+            <div className="skeleton-line skeleton-k"></div>
+            <div className="skeleton-tags">
+              {Array.from({ length: 8 }).map((_, index) => <span className="skeleton-line skeleton-tag" key={index}></span>)}
+            </div>
+          </div>
+        </div>
+        <div className="result-col">
+          <div className="r-block">
+            <div className="skeleton-line skeleton-k"></div>
+            <div className="skeleton-stack">
+              {Array.from({ length: 3 }).map((_, index) => <span className="skeleton-card" key={index}></span>)}
+            </div>
+          </div>
+          <div className="r-block">
+            <div className="skeleton-line skeleton-k"></div>
+            <div className="skeleton-stack">
+              {Array.from({ length: 2 }).map((_, index) => <span className="skeleton-card skeleton-action" key={index}></span>)}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }
 
