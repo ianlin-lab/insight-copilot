@@ -540,9 +540,151 @@ section {
 
 /* === PRODUCT LOGIC === */
 .logic { background: var(--bg); }
+.logic .section-head {
+  margin-bottom: 32px;
+}
+.pipeline-head {
+  margin-bottom: 16px;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  color: var(--muted-2);
+  text-transform: uppercase;
+}
+.logic-flow {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 16px;
+  align-items: stretch;
+  margin-bottom: 44px;
+}
+.logic-flow-step {
+  position: relative;
+  min-width: 0;
+  opacity: 0;
+  transform: translateY(8px);
+  transition:
+    opacity .42s ease,
+    transform .42s ease;
+  transition-delay: calc(var(--step-index) * 80ms);
+}
+.logic-flow-step.is-active {
+  opacity: 1;
+  transform: translateY(0);
+}
+.logic-node {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  min-height: 142px;
+  height: 100%;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 17px 18px 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--bg-card) 84%, var(--bg));
+  box-shadow: 0 1px 2px rgba(40, 30, 20, .03);
+  transition:
+    background-color .36s ease,
+    border-color .36s ease,
+    box-shadow .36s ease,
+    transform .36s ease;
+}
+.logic-flow-step.is-active .logic-node {
+  border-color: #DEC4AB;
+  background: var(--bg-card);
+}
+.logic-flow-step.is-current .logic-node {
+  transform: translateY(-4px);
+  border-color: var(--accent);
+  background: #FFF8EF;
+  box-shadow: 0 18px 44px -34px rgba(168, 95, 56, .46);
+}
+.logic-node-num {
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--line-2);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted-2);
+  background: var(--bg-warm);
+  transition:
+    color .36s ease,
+    background-color .36s ease,
+    border-color .36s ease;
+}
+.logic-flow-step.is-active .logic-node-num {
+  color: var(--accent-strong);
+  border-color: #E2B894;
+  background: var(--accent-soft);
+}
+.logic-node-title {
+  min-height: 42px;
+  font-size: 15px;
+  line-height: 1.4;
+  color: var(--ink);
+  font-weight: 500;
+}
+.logic-node-role {
+  align-self: flex-start;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  color: var(--muted-2);
+}
+.logic-connector {
+  position: absolute;
+  top: 50%;
+  left: 100%;
+  width: 16px;
+  height: 2px;
+  transform: translateY(-50%);
+  background: var(--line-2);
+  overflow: hidden;
+  z-index: 2;
+}
+.logic-connector::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: scaleX(0);
+  transform-origin: left;
+  background: var(--accent);
+  transition: transform .46s ease;
+}
+.logic-connector.is-active::after {
+  transform: scaleX(1);
+}
+.logic.reduce-motion .logic-flow-step,
+.logic.reduce-motion .logic-principles,
+.logic.reduce-motion .logic-principle-row {
+  opacity: 1;
+  transform: none;
+  transition: none;
+}
+.logic.reduce-motion .logic-connector::after {
+  transform: scaleX(1);
+  transition: none;
+}
+.logic.reduce-motion .logic-node {
+  transform: none;
+}
 .logic-principles {
   border-top: 1px solid var(--line);
-  margin-bottom: 40px;
+  opacity: 0;
+  transform: translateY(10px);
+  transition:
+    opacity .42s ease,
+    transform .42s ease;
+}
+.logic-principles.is-visible {
+  opacity: 1;
+  transform: translateY(0);
 }
 .logic-principle-row {
   display: grid;
@@ -550,6 +692,16 @@ section {
   gap: 34px;
   padding: 20px 0;
   border-bottom: 1px solid var(--line);
+  opacity: 0;
+  transform: translateY(8px);
+  transition:
+    opacity .38s ease,
+    transform .38s ease;
+  transition-delay: calc(var(--step-index) * 120ms);
+}
+.logic-principles.is-visible .logic-principle-row {
+  opacity: 1;
+  transform: translateY(0);
 }
 .logic-keyword {
   font-family: var(--serif);
@@ -573,43 +725,6 @@ section {
   font-size: 14.5px;
   line-height: 1.7;
   color: var(--muted);
-}
-.pipeline-head {
-  margin-bottom: 12px;
-  font-family: var(--mono);
-  font-size: 11px;
-  letter-spacing: 0.1em;
-  color: var(--muted-2);
-  text-transform: uppercase;
-}
-.pipeline-list {
-  border-top: 1px solid var(--line);
-}
-.pipeline-row {
-  display: grid;
-  grid-template-columns: 76px minmax(0, 1fr) 108px;
-  gap: 24px;
-  align-items: center;
-  min-height: 50px;
-  border-bottom: 1px solid var(--line);
-}
-.pipeline-num {
-  font-family: var(--mono);
-  font-size: 12px;
-  color: var(--accent-strong);
-  letter-spacing: 0.08em;
-}
-.pipeline-title {
-  font-size: 15px;
-  color: var(--ink);
-  font-weight: 500;
-}
-.pipeline-role {
-  justify-self: end;
-  font-family: var(--mono);
-  font-size: 11px;
-  color: var(--muted-2);
-  letter-spacing: 0.08em;
 }
 
 /* === DEMO === */
@@ -1033,6 +1148,20 @@ footer {
   .uc-row-body { grid-template-columns: 1fr !important; }
   .uc-bridge { flex-direction: row !important; padding: 8px 0 !important; }
   .uc-bridge-line { width: auto !important; height: 1px !important; flex: 1; }
+  .logic-flow { grid-template-columns: 1fr; gap: 14px; margin-bottom: 36px; }
+  .logic-node { min-height: 116px; }
+  .logic-connector {
+    top: 100%;
+    left: 26px;
+    width: 2px;
+    height: 14px;
+    transform: none;
+  }
+  .logic-connector::after {
+    transform: scaleY(0);
+    transform-origin: top;
+  }
+  .logic-connector.is-active::after { transform: scaleY(1); }
   .logic-principle-row { grid-template-columns: 1fr; gap: 10px; padding: 22px 0; }
   .logic-keyword { font-size: 28px; }
   .pipeline-row { grid-template-columns: 56px minmax(0, 1fr) 86px; gap: 14px; }
@@ -1745,6 +1874,12 @@ footer {
   section { padding: 48px 0; }
   .hero { padding: 44px 0 52px; }
   .section-head { margin-bottom: 28px; }
+  .logic .section-head { margin-bottom: 28px; }
+  .logic-node {
+    min-height: 108px;
+    padding: 15px 16px;
+  }
+  .logic-node-title { min-height: 0; }
   .uc-row { padding: 20px 18px; }
   .demo-shell { padding: 20px 16px; }
   .ticket-modal-backdrop { padding: 16px; }

@@ -87,7 +87,7 @@ function createResult(result: AnalysisResult): AnalysisResult {
   }
 }
 
-function mockAnalyzeFeedback(input: string): AnalysisResult {
+export function mockAnalyzeFeedback(input: string): AnalysisResult {
   const text = input.trim()
   if (text.length < 6 || !/[\u4e00-\u9fa5a-zA-Z0-9]/.test(text)) {
     return createResult({

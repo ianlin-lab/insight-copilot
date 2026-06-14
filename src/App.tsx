@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type CSSProperties, type MouseEvent, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { analyzeFeedback } from './services/feedbackAnalyzer'
+import { analyzeFeedback, mockAnalyzeFeedback } from './services/feedbackAnalyzer'
 import type { AnalysisResult, AnalysisType, EvidenceItem, RiskLevel } from './types/analysis'
 import './App.css'
 
@@ -369,6 +369,11 @@ function ReviewUseCase() {
 }
 
 function Logic() {
+  const logicRef = useRef<HTMLElement>(null)
+  const [hasEntered, setHasEntered] = useState(false)
+  const [activeStep, setActiveStep] = useState(-1)
+  const [showPrinciples, setShowPrinciples] = useState(false)
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false)
   const principles = [
     ['Detect.', '不只判断情绪', '从对话和文本中识别情绪走向、问题类型、客户真实诉求和升级信号，不依赖关键词命中。'],
     ['Explain.', '不只输出标签', '每条结果都附带触发依据和置信度，客服与主管能看懂"为什么这条是高风险"。'],
@@ -382,33 +387,107 @@ function Logic() {
     ['05', '预警与工单建议', 'ACT'],
   ]
 
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
+
+    function syncMotionPreference() {
+      setPrefersReducedMotion(mediaQuery.matches)
+    }
+
+    syncMotionPreference()
+    mediaQuery.addEventListener('change', syncMotionPreference)
+
+    return () => mediaQuery.removeEventListener('change', syncMotionPreference)
+  }, [])
+
+  useEffect(() => {
+    const section = logicRef.current
+    if (!section || hasEntered) return
+
+    if (prefersReducedMotion || !('IntersectionObserver' in window)) {
+      setHasEntered(true)
+      return
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setHasEntered(true)
+          observer.disconnect()
+        }
+      },
+      { threshold: 0.32, rootMargin: '0px 0px -12% 0px' },
+    )
+
+    observer.observe(section)
+
+    return () => observer.disconnect()
+  }, [hasEntered, prefersReducedMotion])
+
+  useEffect(() => {
+    if (!hasEntered) return
+
+    if (prefersReducedMotion) {
+      setActiveStep(pipeline.length - 1)
+      setShowPrinciples(true)
+      return
+    }
+
+    const timers = pipeline.map((_, index) => (
+      window.setTimeout(() => setActiveStep(index), 180 + index * 260)
+    ))
+    timers.push(window.setTimeout(() => setShowPrinciples(true), 180 + pipeline.length * 260 + 180))
+
+    return () => timers.forEach((timer) => window.clearTimeout(timer))
+  }, [hasEntered, pipeline.length, prefersReducedMotion])
+
   return (
-    <section id="logic" className="logic reveal-section">
+    <section
+      id="logic"
+      className={`logic reveal-section${prefersReducedMotion ? ' reduce-motion' : ''}`}
+      ref={logicRef}
+    >
       <div className="container">
         <div className="section-head">
           <span className="eyebrow">03 · Product Logic</span>
           <h2>从一句客户反馈，<br />到一个可执行的工单</h2>
           <p>五个步骤，一条可解释的链路。识别不是终点，输出可执行的下一步才是。</p>
         </div>
-        <div className="logic-principles">
-          {principles.map(([keyword, title, copy]) => (
-            <div className="logic-principle-row" key={keyword}>
+
+        <div className="pipeline-head">分析链路 · Pipeline</div>
+        <div className="logic-flow" aria-label="分析链路">
+          {pipeline.map(([num, title, role], index) => {
+            const isActive = activeStep >= index
+            const isCurrent = activeStep === index && !showPrinciples
+            const isConnectorActive = activeStep > index
+
+            return (
+              <div
+                className={`logic-flow-step${isActive ? ' is-active' : ''}${isCurrent ? ' is-current' : ''}`}
+                key={num}
+                style={{ '--step-index': index } as CSSProperties}
+              >
+                <div className="logic-node">
+                  <span className="logic-node-num">{num}</span>
+                  <span className="logic-node-title">{title}</span>
+                  <span className="logic-node-role">{role}</span>
+                </div>
+                {index < pipeline.length - 1 ? (
+                  <span className={`logic-connector${isConnectorActive ? ' is-active' : ''}`} aria-hidden="true"></span>
+                ) : null}
+              </div>
+            )
+          })}
+        </div>
+
+        <div className={`logic-principles${showPrinciples ? ' is-visible' : ''}`}>
+          {principles.map(([keyword, title, copy], index) => (
+            <div className="logic-principle-row" key={keyword} style={{ '--step-index': index } as CSSProperties}>
               <div className="logic-keyword">{keyword}</div>
               <div className="logic-copy">
                 <h3>{title}</h3>
                 <p>{copy}</p>
               </div>
-            </div>
-          ))}
-        </div>
-
-        <div className="pipeline-head">分析链路 · Pipeline</div>
-        <div className="pipeline-list">
-          {pipeline.map(([num, title, role]) => (
-            <div className="pipeline-row" key={num}>
-              <span className="pipeline-num">{num}</span>
-              <span className="pipeline-title">{title}</span>
-              <span className="pipeline-role">{role}</span>
             </div>
           ))}
         </div>
@@ -420,29 +499,20 @@ function Logic() {
 function Demo() {
   const [currentTpl, setCurrentTpl] = useState<TemplateKey>('chat')
   const [text, setText] = useState(templates.chat)
-  const [result, setResult] = useState<AnalysisResult | null>(null)
+  const [result, setResult] = useState<AnalysisResult | null>(() => mockAnalyzeFeedback(templates.chat))
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [ticketCreated, setTicketCreated] = useState(false)
   const [isTicketPreviewOpen, setIsTicketPreviewOpen] = useState(false)
   const [ticketToastVisible, setTicketToastVisible] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const resultRef = useRef<HTMLDivElement>(null)
+  const analyzeInFlightRef = useRef(false)
   const toastTimerRef = useRef<number | null>(null)
   const actionButtonLabel = result ? getActionButtonLabel(result) : ''
   const sourceLabel = getTemplateSourceLabel(currentTpl)
 
   useEffect(() => {
-    let isMounted = true
-
-    async function loadInitialResult() {
-      const initialResult = await analyzeFeedback(templates.chat)
-      if (isMounted) setResult(initialResult)
-    }
-
-    void loadInitialResult()
-
     return () => {
-      isMounted = false
       if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current)
     }
   }, [])
@@ -471,6 +541,9 @@ function Demo() {
   }
 
   async function analyze() {
+    if (analyzeInFlightRef.current) return
+
+    analyzeInFlightRef.current = true
     setIsAnalyzing(true)
     try {
       const nextResult = await analyzeFeedback(text)
@@ -478,6 +551,7 @@ function Demo() {
       setTicketCreated(false)
       resultRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
     } finally {
+      analyzeInFlightRef.current = false
       setIsAnalyzing(false)
     }
   }
